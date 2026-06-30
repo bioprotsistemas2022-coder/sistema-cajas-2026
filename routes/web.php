@@ -50,6 +50,9 @@ Route::middleware(['auth', 'role:admin,deposito'])->group(function () {
 
     // Delegar recepción (generar token externo)
     Route::post('/cajas/{caja}/delegar-recepcion', [DepositoController::class, 'delegarRecepcion'])->name('cajas.delegarRecepcion');
+
+    // Cancelar o postergar cirugía
+    Route::post('/cirugias/{cirugia}/cancelar', [DepositoController::class, 'cancelar'])->name('cirugias.cancelar');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {

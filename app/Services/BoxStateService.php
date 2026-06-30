@@ -36,7 +36,7 @@ class BoxStateService
         $allowed = [
             'DISPONIBLE' => ['EN ESTERILIZADORA', 'EN REPARACION', 'BAJA'],
             'EN ESTERILIZADORA' => ['EN CX', 'DISPONIBLE', 'EN REPARACION'],
-            'EN CX' => ['EN TRANSITO', 'EN REPARACION'],
+            'EN CX' => ['EN TRANSITO', 'EN REPARACION', 'DISPONIBLE'],
             'EN TRANSITO' => ['PENDIENTE'],
             'PENDIENTE' => ['ACONDICIONAMIENTO', 'EN REPARACION'],
             'ACONDICIONAMIENTO' => ['DISPONIBLE'],

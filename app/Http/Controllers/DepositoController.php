@@ -18,7 +18,11 @@ class DepositoController extends Controller
     {
         $cajas = Caja::with('imagenes')->get();
         $tecnicos = User::where('role', 'tecnico')->get();
-        return view('deposito.dashboard', compact('cajas', 'tecnicos'));
+        $tokensActivos = TokensAccion::whereNull('used_at')
+            ->where('expires_at', '>', now())
+            ->get()
+            ->keyBy('caja_id');
+        return view('deposito.dashboard', compact('cajas', 'tecnicos', 'tokensActivos'));
     }
 
     public function egreso(Request $request, Caja $caja)
@@ -138,6 +142,29 @@ class DepositoController extends Controller
         $url = route('recepcion.token', $token);
 
         return back()->with('success', "Link de recepción generado: <a href='{$url}' target='_blank' class='fw-bold'>{$url}</a>");
+    }
+
+    public function cancelar(Request $request, Cirugia $cirugia)
+    {
+        $request->validate([
+            'motivo' => 'required|string',
+            'accion' => 'required|in:cancelar,postergar',
+        ]);
+
+        foreach ($cirugia->cajas as $caja) {
+            BoxStateService::transition($caja, 'DISPONIBLE', auth()->id(), [
+                'observaciones' => "Cirugía {$request->accion}ada: {$request->motivo}"
+            ]);
+        }
+
+        $nuevoStatus = $request->accion === 'cancelar' ? 'CANCELADA' : 'POSTPUESTA';
+        $cirugia->update(['status' => $nuevoStatus]);
+
+        $mensaje = $request->accion === 'cancelar'
+            ? "Cirugía cancelada. Caja(s) retornada(s) a Disponible."
+            : "Cirugía postergada. Caja(s) retornada(s) a Disponible. Se puede reasignar después.";
+
+        return back()->with('success', $mensaje);
     }
 
     public function reparacion(Request $request, Caja $caja)

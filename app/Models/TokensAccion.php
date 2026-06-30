@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class TokensAccion extends Model
 {
+    protected $table = 'tokens_accion';
+
     protected $fillable = [
         'token',
         'accion',

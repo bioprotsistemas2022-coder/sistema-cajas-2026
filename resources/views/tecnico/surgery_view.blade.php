@@ -130,6 +130,19 @@
             <h4 class="fw-bold mb-2" style="color:#065f46;">Logística Finalizada</h4>
             <p class="small mb-0" style="color:#10b981;">El reporte ha sido procesado exitosamente</p>
         </div>
+    @elseif($cirugia->status == 'CANCELADA' || $cirugia->status == 'POSTPUESTA')
+        <div class="text-center py-5" style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border-radius:20px;">
+            <div style="width:80px;height:80px;background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;color:#fff;font-size:2rem;box-shadow:0 10px 30px rgba(239,68,68,0.3);">
+                <i class="bi bi-info-circle-fill"></i>
+            </div>
+            @if($cirugia->status == 'CANCELADA')
+                <h4 class="fw-bold mb-2" style="color:#991b1b;">Cirugía Cancelada</h4>
+                <p class="small mb-0" style="color:#dc2626;">Esta cirugía ha sido cancelada. Las cajas fueron retornadas a depósito.</p>
+            @else
+                <h4 class="fw-bold mb-2" style="color:#92400e;">Cirugía Postergada</h4>
+                <p class="small mb-0" style="color:#d97706;">Esta cirugía ha sido postergada. Conservá este link por si se reactiva más tarde.</p>
+            @endif
+        </div>
     @endif
 
     <div class="modal fade" id="modal-imagen" tabindex="-1">

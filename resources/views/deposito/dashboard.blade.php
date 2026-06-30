@@ -143,6 +143,11 @@
                                             <i class="bi bi-send me-1"></i> Delegar
                                         </button>
                                     @endif
+                                    @if(isset($tokensActivos[$caja->id]))
+                                        <button type="button" class="btn btn-bio btn-sm" style="background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;" onclick="copiarLink('{{ route('recepcion.token', $tokensActivos[$caja->id]->token) }}')">
+                                            <i class="bi bi-clipboard me-1"></i> Link
+                                        </button>
+                                    @endif
                                     <a href="{{ route('cajas.show', $caja) }}" class="btn btn-outline-secondary btn-bio btn-sm">
                                         <i class="bi bi-eye me-1"></i> Detalles
                                     </a>
@@ -305,14 +310,15 @@
         </div>
     @endforeach
 
+    @php
+        $cirugiasActivas = \App\Models\Cirugia::whereIn('status', ['PENDIENTE', 'EN_CURSO'])->with('cajas', 'tecnico')->get();
+    @endphp
+
     <div class="card card-elegante mb-4">
         <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
             <h5 class="mb-0" style="color:#5b21b6;"><i class="bi bi-heart-pulse me-2" style="color:#7c3aed;"></i>Cirugías Activas</h5>
         </div>
         <div class="card-body p-0">
-            @php
-                $cirugiasActivas = \App\Models\Cirugia::whereIn('status', ['PENDIENTE', 'EN_CURSO'])->with('cajas', 'tecnico')->get();
-            @endphp
             @forelse($cirugiasActivas as $cirugia)
                 <div class="d-flex align-items-center justify-content-between px-4 py-3 border-bottom">
                     <div class="d-flex align-items-center gap-3">
@@ -335,62 +341,18 @@
                             </small>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-outline-primary btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-reasignar-{{ $cirugia->id }}">
-                        <i class="bi bi-arrow-repeat me-1"></i> Reasignar
-                    </button>
-                </div>
-
-                <div class="modal fade" id="modal-reasignar-{{ $cirugia->id }}" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content border-0 shadow-lg rounded-4">
-                            <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4">
-                                <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-repeat me-2" style="color:#7c3aed;"></i>Reasignar — {{ $cirugia->paciente }}</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <form action="{{ route('cirugias.reasignar', $cirugia) }}" method="POST">
-                                @csrf
-                                <div class="modal-body px-4 py-4">
-                                    <div class="mb-3">
-                                        <label class="form-label form-label-bio">Técnico Actual</label>
-                                        <p class="form-control form-control-bio bg-light mb-0" style="cursor:default;">
-                                            {{ $cirugia->tecnico?->name ?? $cirugia->tecnico_nombre ?? 'Sin asignar' }}
-                                            @if($cirugia->tecnico_original_id)
-                                                <small class="text-muted">(original: {{ \App\Models\User::find($cirugia->tecnico_original_id)?->name ?? 'N/A' }})</small>
-                                            @endif
-                                        </p>
-                                    </div>
-                                    <div class="mb-3">
-                                        <div class="d-flex gap-3 mb-2">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="tipo_reasignar" value="registrado" id="reasignar-reg-{{ $cirugia->id }}" checked onchange="toggleReasignar('{{ $cirugia->id }}')">
-                                                <label class="form-check-label small" for="reasignar-reg-{{ $cirugia->id }}">Registrado</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="tipo_reasignar" value="externo" id="reasignar-ext-{{ $cirugia->id }}" onchange="toggleReasignar('{{ $cirugia->id }}')">
-                                                <label class="form-check-label small" for="reasignar-ext-{{ $cirugia->id }}">Externo</label>
-                                            </div>
-                                        </div>
-                                        <div id="reasignar-registro-{{ $cirugia->id }}">
-                                            <label class="form-label form-label-bio">Nuevo Técnico</label>
-                                            <select name="tecnico_id" class="form-select form-control-bio">
-                                                <option value="">Seleccionar...</option>
-                                                @foreach($tecnicos as $tecnico)
-                                                    <option value="{{ $tecnico->id }}">{{ $tecnico->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div id="reasignar-externo-{{ $cirugia->id }}" style="display:none;">
-                                            <label class="form-label form-label-bio">Nombre del Reemplazo Externo</label>
-                                            <input type="text" name="tecnico_nombre" class="form-control form-control-bio" placeholder="Nombre completo">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
-                                    <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
-                                    <button type="submit" class="btn btn-primary btn-bio"><i class="bi bi-check-lg me-1"></i> Reasignar</button>
-                                </div>
-                            </form>
-                        </div>
+                    <div class="d-flex gap-2">
+                        @if(!$cirugia->tecnico_id && $cirugia->tecnico_nombre)
+                            <button type="button" class="btn btn-bio btn-sm" style="background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;" onclick="copiarLink('{{ route('tecnico.surgery.view', [$cirugia, $cirugia->access_token]) }}')">
+                                <i class="bi bi-clipboard me-1"></i> Copiar Link
+                            </button>
+                        @endif
+                        <button type="button" class="btn btn-outline-primary btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-reasignar-{{ $cirugia->id }}">
+                            <i class="bi bi-arrow-repeat me-1"></i> Reasignar
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-cancelar-{{ $cirugia->id }}">
+                            <i class="bi bi-x-circle me-1"></i> Cancelar
+                        </button>
                     </div>
                 </div>
             @empty
@@ -401,7 +363,112 @@
         </div>
     </div>
 
+    @foreach($cirugiasActivas as $cirugia)
+        <div class="modal fade" id="modal-reasignar-{{ $cirugia->id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg rounded-4">
+                    <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-repeat me-2" style="color:#7c3aed;"></i>Reasignar — {{ $cirugia->paciente }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ route('cirugias.reasignar', $cirugia) }}" method="POST">
+                        @csrf
+                        <div class="modal-body px-4 py-4">
+                            <div class="mb-3">
+                                <label class="form-label form-label-bio">Técnico Actual</label>
+                                <p class="form-control form-control-bio bg-light mb-0" style="cursor:default;">
+                                    {{ $cirugia->tecnico?->name ?? $cirugia->tecnico_nombre ?? 'Sin asignar' }}
+                                    @if($cirugia->tecnico_original_id)
+                                        <small class="text-muted">(original: {{ \App\Models\User::find($cirugia->tecnico_original_id)?->name ?? 'N/A' }})</small>
+                                    @endif
+                                </p>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex gap-3 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="tipo_reasignar" value="registrado" id="reasignar-reg-{{ $cirugia->id }}" checked onchange="toggleReasignar('{{ $cirugia->id }}')">
+                                        <label class="form-check-label small" for="reasignar-reg-{{ $cirugia->id }}">Registrado</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="tipo_reasignar" value="externo" id="reasignar-ext-{{ $cirugia->id }}" onchange="toggleReasignar('{{ $cirugia->id }}')">
+                                        <label class="form-check-label small" for="reasignar-ext-{{ $cirugia->id }}">Externo</label>
+                                    </div>
+                                </div>
+                                <div id="reasignar-registro-{{ $cirugia->id }}">
+                                    <label class="form-label form-label-bio">Nuevo Técnico</label>
+                                    <select name="tecnico_id" class="form-select form-control-bio">
+                                        <option value="">Seleccionar...</option>
+                                        @foreach($tecnicos as $tecnico)
+                                            <option value="{{ $tecnico->id }}">{{ $tecnico->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div id="reasignar-externo-{{ $cirugia->id }}" style="display:none;">
+                                    <label class="form-label form-label-bio">Nombre del Reemplazo Externo</label>
+                                    <input type="text" name="tecnico_nombre" class="form-control form-control-bio" placeholder="Nombre completo">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
+                            <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary btn-bio"><i class="bi bi-check-lg me-1"></i> Reasignar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+
+    @foreach($cirugiasActivas as $cirugia)
+        <div class="modal fade" id="modal-cancelar-{{ $cirugia->id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg rounded-4">
+                    <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4" style="background:linear-gradient(135deg,#fef2f2,#fee2e2);">
+                        <h5 class="mb-0 fw-bold" style="color:#991b1b;"><i class="bi bi-x-circle me-2" style="color:#dc2626;"></i>Cancelar / Postergar — {{ $cirugia->paciente }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ route('cirugias.cancelar', $cirugia) }}" method="POST">
+                        @csrf
+                        <div class="modal-body px-4 py-4">
+                            <div class="mb-3">
+                                <label class="form-label form-label-bio">Acción</label>
+                                <select name="accion" class="form-select form-control-bio" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="cancelar">Cancelar cirugía definitivamente</option>
+                                    <option value="postergar">Postergar (se puede retomar después)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label form-label-bio">Motivo</label>
+                                <textarea name="motivo" rows="3" class="form-control form-control-bio" required placeholder="Ej: Paciente reprogramado / Emergencia / Equipo no disponible..."></textarea>
+                            </div>
+                            <div class="alert alert-warning py-2 px-3 small mb-0">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Las cajas asociadas volverán a estado <strong>DISPONIBLE</strong>.
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
+                            <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Volver</button>
+                            <button type="submit" class="btn btn-danger btn-bio"><i class="bi bi-check-lg me-1"></i> Confirmar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+
     <script>
+        function copiarLink(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                const toast = document.createElement('div');
+                toast.className = 'position-fixed top-50 start-50 translate-middle';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = '<div class="bg-dark text-white px-5 py-3 rounded-4 shadow-lg fw-semibold" style="font-size:1rem;"><i class="bi bi-check-circle-fill text-success me-2"></i>Link copiado al portapapeles</div>';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            });
+        }
+
         function toggleTecnico(id) {
             const reg = document.getElementById('tecnico-registrado-' + id);
             const ext = document.getElementById('tecnico-externo-' + id);
