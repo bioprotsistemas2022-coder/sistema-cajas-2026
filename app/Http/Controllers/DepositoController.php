@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Caja;
 use App\Models\CajaImagen;
 use App\Models\Cirugia;
+use App\Models\TokensAccion;
 use App\Models\User;
 use App\Services\BoxStateService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
 class DepositoController extends Controller
@@ -22,7 +24,6 @@ class DepositoController extends Controller
     public function egreso(Request $request, Caja $caja)
     {
         $request->validate([
-            'tecnico_id' => 'required|exists:users,id',
             'paciente' => 'required|string',
             'medico' => 'required|string',
             'bioimplant_id' => 'nullable|string',
@@ -32,14 +33,23 @@ class DepositoController extends Controller
             return back()->with('error', 'La caja no puede pasar a Esterilizadora desde su estado actual.');
         }
 
-        $cirugia = Cirugia::create([
+        $cirugiaData = [
             'paciente' => $request->paciente,
             'medico' => $request->medico,
             'bioimplant_id' => $request->bioimplant_id,
-            'tecnico_id' => $request->tecnico_id,
             'fecha_cx' => now(),
             'status' => 'PENDIENTE'
-        ]);
+        ];
+
+        if ($request->tipo_tecnico === 'externo') {
+            $cirugiaData['tecnico_id'] = null;
+            $cirugiaData['tecnico_nombre'] = $request->tecnico_nombre;
+        } else {
+            $request->validate(['tecnico_id' => 'required|exists:users,id']);
+            $cirugiaData['tecnico_id'] = $request->tecnico_id;
+        }
+
+        $cirugia = Cirugia::create($cirugiaData);
 
         $cirugia->cajas()->attach($caja->id);
 
@@ -68,7 +78,66 @@ class DepositoController extends Controller
             'observaciones' => "Egreso hacia esterilizadora para CX de {$request->paciente}"
         ]);
 
-        return back()->with('success', 'Caja enviada a Esterilizadora correctamente.');
+        $successMsg = 'Caja enviada a Esterilizadora correctamente.';
+        if ($request->tipo_tecnico === 'externo') {
+            $url = route('tecnico.surgery.view', [$cirugia, $cirugia->access_token]);
+            $successMsg .= " Link para técnico externo: <a href='{$url}' target='_blank' class='fw-bold text-white'>{$url}</a>";
+        }
+
+        return back()->with('success', $successMsg);
+    }
+
+    public function reasignar(Request $request, Cirugia $cirugia)
+    {
+        $request->validate([
+            'tecnico_id' => 'nullable|exists:users,id',
+            'tecnico_nombre' => 'nullable|string|max:255',
+        ]);
+
+        if (!$request->tecnico_id && !$request->tecnico_nombre) {
+            return back()->with('error', 'Debe seleccionar un técnico o indicar un nombre externo.');
+        }
+
+        if ($cirugia->tecnico_id && !$cirugia->tecnico_original_id) {
+            $cirugia->update(['tecnico_original_id' => $cirugia->tecnico_id]);
+        }
+
+        $cirugia->update([
+            'tecnico_id' => $request->tecnico_id,
+            'tecnico_nombre' => $request->tecnico_nombre,
+        ]);
+
+        $nombre = $request->tecnico_id
+            ? User::find($request->tecnico_id)?->name ?? 'Técnico'
+            : $request->tecnico_nombre;
+
+        return back()->with('success', "Cirugía reasignada a {$nombre}.");
+    }
+
+    public function delegarRecepcion(Request $request, Caja $caja)
+    {
+        $request->validate([
+            'responsable_nombre' => 'required|string|max:255',
+            'accion' => 'required|in:consumo.controlar,consumo.finalizar',
+            'resultado' => 'required_if:accion,consumo.finalizar|in:ok,falla',
+        ]);
+
+        $token = Str::random(48);
+
+        $params = ['resultado' => $request->resultado] ?? [];
+
+        TokensAccion::create([
+            'token' => $token,
+            'accion' => $request->accion,
+            'caja_id' => $caja->id,
+            'responsable_nombre' => $request->responsable_nombre,
+            'params' => $params,
+            'expires_at' => now()->addHours(24),
+        ]);
+
+        $url = route('recepcion.token', $token);
+
+        return back()->with('success', "Link de recepción generado: <a href='{$url}' target='_blank' class='fw-bold'>{$url}</a>");
     }
 
     public function reparacion(Request $request, Caja $caja)

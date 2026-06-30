@@ -4,29 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class EventoCaja extends Model
+class TokensAccion extends Model
 {
     protected $fillable = [
+        'token',
+        'accion',
         'caja_id',
-        'user_id',
         'responsable_nombre',
-        'estado_anterior',
-        'estado_nuevo',
-        'observaciones',
-        'fotos'
+        'params',
+        'expires_at',
+        'used_at',
     ];
 
     protected $casts = [
-        'fotos' => 'json'
+        'params' => 'json',
+        'expires_at' => 'datetime',
+        'used_at' => 'datetime',
     ];
 
     public function caja()
     {
         return $this->belongsTo(Caja::class);
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
     }
 }

@@ -15,6 +15,8 @@ class Cirugia extends Model
         'start_time',
         'end_time',
         'tecnico_id',
+        'tecnico_nombre',
+        'tecnico_original_id',
         'access_token',
         'status'
     ];

@@ -76,6 +76,12 @@
     @if($cirugia->status == 'PENDIENTE')
         <form action="{{ route('tecnico.surgery.llegado', $cirugia) }}" method="POST">
             @csrf
+            @unless(auth()->check())
+                <div class="mb-3">
+                    <label class="form-label form-label-bio">Tu nombre (técnico)</label>
+                    <input type="text" name="responsable_nombre" class="form-control form-control-bio" required placeholder="Nombre completo" value="{{ $cirugia->tecnico_nombre ?? '' }}">
+                </div>
+            @endunless
             <button type="submit" class="btn btn-lg w-100 py-3 btn-bio" style="background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;font-weight:700;font-size:0.95rem;">
                 <i class="bi bi-geo-alt me-2"></i> Confirmar Arribo
             </button>

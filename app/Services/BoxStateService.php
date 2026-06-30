@@ -8,18 +8,17 @@ use Illuminate\Support\Facades\DB;
 
 class BoxStateService
 {
-    public static function transition(Caja $caja, string $newEstado, int $userId, array $data = [])
+    public static function transition(Caja $caja, string $newEstado, ?int $userId, array $data = [])
     {
         return DB::transaction(function () use ($caja, $newEstado, $userId, $data) {
             $estadoAnterior = $caja->estado;
-            
-            // Update box state
+
             $caja->update(['estado' => $newEstado]);
 
-            // Log event
             EventoCaja::create([
                 'caja_id' => $caja->id,
                 'user_id' => $userId,
+                'responsable_nombre' => $data['responsable_nombre'] ?? null,
                 'estado_anterior' => $estadoAnterior,
                 'estado_nuevo' => $newEstado,
                 'observaciones' => $data['observaciones'] ?? null,

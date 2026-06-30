@@ -44,6 +44,12 @@ Route::middleware(['auth', 'role:admin,deposito'])->group(function () {
     Route::post('/admin/tecnicos', [AdminTecnicoController::class, 'store'])->name('admin.tecnicos.store');
     Route::put('/admin/tecnicos/{tecnico}', [AdminTecnicoController::class, 'update'])->name('admin.tecnicos.update');
     Route::delete('/admin/tecnicos/{tecnico}', [AdminTecnicoController::class, 'destroy'])->name('admin.tecnicos.destroy');
+
+    // Reasignar técnico de cirugía
+    Route::post('/cirugias/{cirugia}/reasignar', [DepositoController::class, 'reasignar'])->name('cirugias.reasignar');
+
+    // Delegar recepción (generar token externo)
+    Route::post('/cajas/{caja}/delegar-recepcion', [DepositoController::class, 'delegarRecepcion'])->name('cajas.delegarRecepcion');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
@@ -65,6 +71,10 @@ Route::middleware(['auth', 'role:admin,tecnico'])->group(function () {
 Route::get('/cx/{cirugia}/{token}', [TecnicoController::class, 'viewSurgery'])->name('tecnico.surgery.view');
 Route::post('/cx/{cirugia}/llegado', [TecnicoController::class, 'llegado'])->name('tecnico.surgery.llegado');
 Route::post('/cx/{cirugia}/finalizar', [TecnicoController::class, 'finalizar'])->name('tecnico.surgery.finalizar');
+
+// Token público para recepción (logística externa)
+Route::get('/recepcion/{token}', [ConsumoController::class, 'viewToken'])->name('recepcion.token');
+Route::post('/recepcion/{token}/confirmar', [ConsumoController::class, 'confirmarToken'])->name('recepcion.confirmar');
 
 Route::middleware(['auth', 'role:admin,consumo'])->group(function () {
     Route::get('/consumo', [ConsumoController::class, 'index'])->name('consumo.dashboard');

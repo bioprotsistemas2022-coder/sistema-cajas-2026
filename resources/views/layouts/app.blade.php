@@ -134,7 +134,7 @@
             @if(session('success'))
                 <div class="alert alert-success alert-bio alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
                     <i class="bi bi-check-circle-fill fs-5 me-2 flex-shrink-0"></i>
-                    <span>{{ session('success') }}</span>
+                    <span>{!! session('success') !!}</span>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                 </div>
             @endif

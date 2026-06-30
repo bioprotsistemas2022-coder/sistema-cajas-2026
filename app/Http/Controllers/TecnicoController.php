@@ -27,11 +27,19 @@ class TecnicoController extends Controller
 
     public function llegado(Request $request, Cirugia $cirugia)
     {
-        // Technician confirms boxes arrived OK
+        $userId = auth()->id();
+        $data = ['observaciones' => "Llegado en condiciones para CX"];
+
+        if (!$userId) {
+            $userId = $cirugia->tecnico_id;
+            $responsable = $request->responsable_nombre ?? $cirugia->tecnico_nombre;
+            if ($responsable) {
+                $data['responsable_nombre'] = $responsable;
+            }
+        }
+
         foreach ($cirugia->cajas as $caja) {
-            BoxStateService::transition($caja, 'EN CX', auth()->id() ?? $cirugia->tecnico_id, [
-                'observaciones' => "Llegado en condiciones para CX"
-            ]);
+            BoxStateService::transition($caja, 'EN CX', $userId, $data);
         }
 
         $cirugia->update([
@@ -49,13 +57,20 @@ class TecnicoController extends Controller
             'observaciones' => 'nullable|string'
         ]);
 
-        foreach ($cirugia->cajas as $caja) {
-            // After CX, boxes go to TRANSITO
-            BoxStateService::transition($caja, 'EN TRANSITO', auth()->id() ?? $cirugia->tecnico_id, [
-                'observaciones' => "Cirugía finalizada. Pendiente de control de consumos."
-            ]);
+        $userId = auth()->id();
+        $data = ['observaciones' => "Cirugía finalizada. Pendiente de control de consumos."];
 
-            // Save consumptions
+        if (!$userId) {
+            $userId = $cirugia->tecnico_id;
+            $responsable = $request->responsable_nombre ?? $cirugia->tecnico_nombre;
+            if ($responsable) {
+                $data['responsable_nombre'] = $responsable;
+            }
+        }
+
+        foreach ($cirugia->cajas as $caja) {
+            BoxStateService::transition($caja, 'EN TRANSITO', $userId, $data);
+
             Consumo::create([
                 'cirugia_id' => $cirugia->id,
                 'caja_id' => $caja->id,
