@@ -34,4 +34,4 @@ jobs:
           php artisan view:cache
 
           # Reiniciar servidor Laravel (tmux)
-          tmux send-keys -t laravel "php artisan serve" Enter
+          tmux send-keys -t laravel "php artisan serve --host=0.0.0.0 --port=8000" Enter
