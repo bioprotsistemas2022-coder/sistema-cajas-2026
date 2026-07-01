@@ -8,6 +8,7 @@ use App\Models\Cirugia;
 use App\Models\TokensAccion;
 use App\Models\User;
 use App\Services\BoxStateService;
+use App\Services\ProcedureApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -31,6 +32,7 @@ class DepositoController extends Controller
             'paciente' => 'required|string',
             'medico' => 'required|string',
             'bioimplant_id' => 'nullable|string',
+            'plc_cod' => 'nullable|string',
         ]);
 
         if (!BoxStateService::canTransition($caja, 'EN ESTERILIZADORA')) {
@@ -41,6 +43,7 @@ class DepositoController extends Controller
             'paciente' => $request->paciente,
             'medico' => $request->medico,
             'bioimplant_id' => $request->bioimplant_id,
+            'plc_cod' => $request->plc_cod,
             'fecha_cx' => now(),
             'status' => 'PENDIENTE'
         ];
@@ -78,8 +81,12 @@ class DepositoController extends Controller
             }
         }
 
+        $obs = "Egreso hacia esterilizadora para CX de {$request->paciente}";
+        if ($request->plc_cod) {
+            $obs .= " [PlcCod:{$request->plc_cod}]";
+        }
         BoxStateService::transition($caja, 'EN ESTERILIZADORA', auth()->id(), [
-            'observaciones' => "Egreso hacia esterilizadora para CX de {$request->paciente}"
+            'observaciones' => $obs,
         ]);
 
         $successMsg = 'Caja enviada a Esterilizadora correctamente.';
@@ -187,5 +194,35 @@ class DepositoController extends Controller
         ]);
 
         return back()->with('success', 'Caja dada de baja.');
+    }
+
+    public function disponibilizar(Caja $caja)
+    {
+        if (!BoxStateService::canTransition($caja, 'DISPONIBLE')) {
+            return back()->with('error', 'Esta caja no puede volver a Disponible desde su estado actual.');
+        }
+
+        BoxStateService::transition($caja, 'DISPONIBLE', auth()->id(), [
+            'observaciones' => 'Caja reparada y vuelta a Disponible'
+        ]);
+
+        return back()->with('success', "{$caja->nombre} está nuevamente Disponible.");
+    }
+
+    public function buscarProcedimientos(Request $request, ProcedureApiService $api)
+    {
+        $request->validate([
+            'fecha_desde' => 'nullable|date',
+            'fecha_hasta' => 'nullable|date',
+            'paciente' => 'nullable|string|max:255',
+            'medico' => 'nullable|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $filters = array_filter($request->only(['fecha_desde', 'fecha_hasta', 'paciente', 'medico', 'limit']));
+
+        $data = $api->search($filters);
+
+        return response()->json($data);
     }
 }

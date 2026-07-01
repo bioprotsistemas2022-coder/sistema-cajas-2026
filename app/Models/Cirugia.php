@@ -9,6 +9,7 @@ class Cirugia extends Model
 {
     protected $fillable = [
         'bioimplant_id',
+        'plc_cod',
         'paciente',
         'medico',
         'fecha_cx',

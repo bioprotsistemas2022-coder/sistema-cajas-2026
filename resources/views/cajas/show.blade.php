@@ -12,7 +12,7 @@
     </div>
 
     <div class="row g-4">
-        <div class="col-lg-4">
+        <div class="col-xl-3 col-lg-4">
             <div class="card card-elegante h-100">
                 <div class="card-header">
                     <h5><i class="bi bi-info-circle me-2" style="color:#3b82f6;"></i>Información</h5>
@@ -74,7 +74,7 @@
             </div>
         </div>
 
-        <div class="col-lg-8">
+        <div class="col-xl-9 col-lg-8">
             <div class="card card-elegante mb-4">
                 <div class="card-header">
                     <h5><i class="bi bi-images me-2" style="color:#8b5cf6;"></i>Imágenes de la Caja</h5>
@@ -107,7 +107,7 @@
                     @else
                         <div class="row g-3">
                             @foreach($caja->imagenes as $img)
-                                <div class="col-md-4 col-lg-3">
+                                <div class="col-md-3 col-lg-2 col-4">
                                     <div class="position-relative" style="border-radius:16px;overflow:hidden;border:2px solid #e2e8f0;">
                                         <img src="{{ Storage::url($img->ruta) }}" class="img-fluid w-100" style="height:150px;object-fit:cover;">
                                         <div class="position-absolute top-0 end-0 m-2">
@@ -144,17 +144,26 @@
                                         <th>Estado Anterior</th>
                                         <th>Estado Nuevo</th>
                                         <th>Usuario</th>
-                                        <th>Obs.</th>
+                                        <th>Observaciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($caja->eventos->sortByDesc('created_at') as $evento)
+                                        @php
+                                            $obs = $evento->observaciones ?? '';
+                                            $obsHtml = e($obs);
+                                            $obsHtml = preg_replace(
+                                                '/\[PlcCod:(\d+)\]/',
+                                                '<a href="http://bioprot.ddns.net/procedure/api/planillacx.php?id=$1" target="_blank" class="btn btn-sm px-2 py-0 ms-1" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:50rem;font-size:0.7rem;"><i class="bi bi-box-arrow-up-right me-1"></i>PlcCod #$1</a>',
+                                                $obsHtml
+                                            );
+                                        @endphp
                                         <tr>
                                             <td><small>{{ $evento->created_at->format('d/m/Y H:i') }}</small></td>
                                             <td><span class="badge badge-estado badge-secondary">{{ $evento->estado_anterior ?? '—' }}</span></td>
                                             <td><span class="badge badge-estado {{ $estilos[$evento->estado_nuevo] ?? 'badge-secondary' }}">{{ $evento->estado_nuevo }}</span></td>
                                             <td><small>{{ $evento->user->name ?? 'Sistema' }}</small></td>
-                                            <td><small>{{ $evento->observaciones ?? '—' }}</small></td>
+                                            <td><small>{!! $obsHtml ?: '—' !!}</small></td>
                                         </tr>
                                     @endforeach
                                 </tbody>

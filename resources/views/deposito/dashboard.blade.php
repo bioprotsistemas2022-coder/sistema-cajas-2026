@@ -148,6 +148,21 @@
                                             <i class="bi bi-clipboard me-1"></i> Link
                                         </button>
                                     @endif
+                                    @if(in_array($caja->estado, ['DISPONIBLE', 'EN ESTERILIZADORA', 'EN CX', 'PENDIENTE']))
+                                        <button type="button" class="btn btn-warning btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-reparar-{{ $caja->id }}">
+                                            <i class="bi bi-tools me-1"></i> Reparar
+                                        </button>
+                                    @endif
+                                    @if($caja->estado == 'EN REPARACION')
+                                        <button type="button" class="btn btn-success btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-disponible-{{ $caja->id }}">
+                                            <i class="bi bi-check-lg me-1"></i> Disponible
+                                        </button>
+                                    @endif
+                                    @if(in_array($caja->estado, ['DISPONIBLE', 'EN REPARACION']))
+                                        <button type="button" class="btn btn-danger btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-baja-{{ $caja->id }}">
+                                            <i class="bi bi-trash me-1"></i> Baja
+                                        </button>
+                                    @endif
                                     <a href="{{ route('cajas.show', $caja) }}" class="btn btn-outline-secondary btn-bio btn-sm">
                                         <i class="bi bi-eye me-1"></i> Detalles
                                     </a>
@@ -174,6 +189,67 @@
                             <div class="row g-4">
                                 <div class="col-md-6">
                                     <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-person me-1" style="color:#3b82f6;"></i> Datos de la Cirugía</h6>
+
+                                    {{-- Buscador en API externa --}}
+                                    <div class="mb-3">
+                                        <button type="button" class="btn btn-outline-info btn-bio btn-sm w-100" onclick="toggleBuscar('{{ $caja->id }}')">
+                                            <i class="bi bi-search me-1"></i> Buscar en sistema externo
+                                        </button>
+                                    </div>
+
+                                    <div id="panel-buscar-{{ $caja->id }}" style="display:none;" class="mb-3 p-3 rounded-3 bg-light border">
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <label class="form-label form-label-bio small">Fecha Desde</label>
+                                                <input type="date" id="bfecha_desde-{{ $caja->id }}" class="form-control form-control-bio form-control-sm">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label form-label-bio small">Fecha Hasta</label>
+                                                <input type="date" id="bfecha_hasta-{{ $caja->id }}" class="form-control form-control-bio form-control-sm">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label form-label-bio small">Paciente</label>
+                                                <input type="text" id="bpaciente-{{ $caja->id }}" class="form-control form-control-bio form-control-sm" placeholder="Nombre">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label form-label-bio small">Médico</label>
+                                                <input type="text" id="bmedico-{{ $caja->id }}" class="form-control form-control-bio form-control-sm" placeholder="Dr.">
+                                            </div>
+                                            <div class="col-12 mt-2">
+                                                <button type="button" class="btn btn-primary btn-bio btn-sm w-100" onclick="buscarProcedimientos('{{ $caja->id }}')">
+                                                    <i class="bi bi-search me-1"></i> Buscar
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Resultados de búsqueda --}}
+                                        <div id="resultados-{{ $caja->id }}" class="mt-3" style="display:none;">
+                                            <hr class="my-2">
+                                            <div class="table-responsive" style="max-height:200px;overflow-y:auto;">
+                                                <table class="table table-sm table-bio mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>PlcCod</th>
+                                                            <th>Fecha</th>
+                                                            <th>Paciente</th>
+                                                            <th>Médico</th>
+                                                            <th>Hospital</th>
+                                                            <th></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="tabla-resultados-{{ $caja->id }}"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Badge de CX seleccionada --}}
+                                    <div id="cx-seleccionada-{{ $caja->id }}" class="alert alert-success py-1 px-3 mb-3 small d-none" style="border-left:4px solid #10b981;">
+                                        <i class="bi bi-check-circle-fill me-1" style="color:#10b981;"></i>
+                                        CX <span id="codigo-cx-{{ $caja->id }}"></span> seleccionada
+                                    </div>
+
+                                    <input type="hidden" name="plc_cod" id="plc_cod-{{ $caja->id }}" value="">
 
                                     <div class="mb-3">
                                         <label class="form-label form-label-bio">Tipo de Técnico</label>
@@ -210,11 +286,11 @@
                                     <div class="row g-3">
                                         <div class="col-6">
                                             <label class="form-label form-label-bio">Paciente</label>
-                                            <input type="text" name="paciente" required class="form-control form-control-bio" placeholder="Nombre completo">
+                                            <input type="text" name="paciente" id="input-paciente-{{ $caja->id }}" required class="form-control form-control-bio" placeholder="Nombre completo">
                                         </div>
                                         <div class="col-6">
                                             <label class="form-label form-label-bio">Médico</label>
-                                            <input type="text" name="medico" required class="form-control form-control-bio" placeholder="Dr. / Dra.">
+                                            <input type="text" name="medico" id="input-medico-{{ $caja->id }}" required class="form-control form-control-bio" placeholder="Dr. / Dra.">
                                         </div>
                                     </div>
                                     <div class="mt-3">
@@ -259,6 +335,89 @@
                             <button type="submit" class="btn btn-primary btn-bio px-4">
                                 <i class="bi bi-check-lg me-1"></i> Confirmar Egreso
                             </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+
+    {{-- Modal Reparar --}}
+    @foreach($cajas->whereIn('estado', ['DISPONIBLE', 'EN ESTERILIZADORA', 'EN CX', 'PENDIENTE']) as $caja)
+        <div class="modal fade" id="modal-reparar-{{ $caja->id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg rounded-4">
+                    <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-tools me-2" style="color:#d97706;"></i>Enviar a Reparación — {{ $caja->nombre }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ route('cajas.reparacion', $caja) }}" method="POST">
+                        @csrf
+                        <div class="modal-body px-4 py-4">
+                            <p class="small text-muted mb-3">La caja pasará a estado <strong>EN REPARACION</strong>.</p>
+                            <div class="mb-3">
+                                <label class="form-label form-label-bio">Motivo / Observaciones</label>
+                                <textarea name="observaciones" rows="3" class="form-control form-control-bio" required placeholder="Describa el problema..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
+                            <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-warning btn-bio"><i class="bi bi-tools me-1"></i> Enviar a Reparación</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+
+    {{-- Modal Volver a Disponible (desde Reparación) --}}
+    @foreach($cajas->where('estado', 'EN REPARACION') as $caja)
+        <div class="modal fade" id="modal-disponible-{{ $caja->id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg rounded-4">
+                    <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
+                        <h5 class="mb-0 fw-bold" style="color:#065f46;"><i class="bi bi-check-circle me-2" style="color:#10b981;"></i>Volver a Disponible — {{ $caja->nombre }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ route('cajas.disponibilizar', $caja) }}" method="POST">
+                        @csrf
+                        <div class="modal-body px-4 py-4">
+                            <p class="mb-0">La caja pasará a estado <strong>DISPONIBLE</strong>.</p>
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
+                            <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success btn-bio"><i class="bi bi-check-lg me-1"></i> Volver a Disponible</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+
+    {{-- Modal Baja --}}
+    @foreach($cajas->whereIn('estado', ['DISPONIBLE', 'EN REPARACION']) as $caja)
+        <div class="modal fade" id="modal-baja-{{ $caja->id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg rounded-4">
+                    <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4" style="background:linear-gradient(135deg,#fef2f2,#fee2e2);">
+                        <h5 class="mb-0 fw-bold" style="color:#991b1b;"><i class="bi bi-trash me-2" style="color:#dc2626;"></i>Dar de Baja — {{ $caja->nombre }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ route('cajas.baja', $caja) }}" method="POST">
+                        @csrf
+                        <div class="modal-body px-4 py-4">
+                            <div class="alert alert-danger py-2 px-3 small">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Esta acción es irreversible. La caja quedará fuera de circulación.
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label form-label-bio">Motivo / Observaciones</label>
+                                <textarea name="observaciones" rows="3" class="form-control form-control-bio" required placeholder="Ej: Daño estructural irreparable..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
+                            <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-danger btn-bio"><i class="bi bi-check-lg me-1"></i> Confirmar Baja</button>
                         </div>
                     </form>
                 </div>
@@ -458,6 +617,66 @@
     @endforeach
 
     <script>
+        function toggleBuscar(id) {
+            const panel = document.getElementById('panel-buscar-' + id);
+            panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        function buscarProcedimientos(id) {
+            const fecha_desde = document.getElementById('bfecha_desde-' + id).value;
+            const fecha_hasta = document.getElementById('bfecha_hasta-' + id).value;
+            const paciente = document.getElementById('bpaciente-' + id).value;
+            const medico = document.getElementById('bmedico-' + id).value;
+            const tbody = document.getElementById('tabla-resultados-' + id);
+            const contenedor = document.getElementById('resultados-' + id);
+
+            const params = new URLSearchParams();
+            params.set('limit', 20);
+            if (fecha_desde) params.set('fecha_desde', fecha_desde);
+            if (fecha_hasta) params.set('fecha_hasta', fecha_hasta);
+            if (paciente) params.set('paciente', paciente);
+            if (medico) params.set('medico', medico);
+
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-2"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Buscando...</td></tr>';
+            contenedor.style.display = '';
+
+            fetch('{{ route("procedimientos.buscar") }}?' + params.toString())
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data || data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-2">Sin resultados</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = '';
+                    data.forEach(function(item) {
+                        var tr = document.createElement('tr');
+                        tr.innerHTML = '<td><code>' + item.id_cirugia + '</code></td>' +
+                            '<td>' + (item.fecha_cirugia || '') + '</td>' +
+                            '<td>' + (item.paciente || '') + '</td>' +
+                            '<td>' + (item.nombre_medico || '') + '</td>' +
+                            '<td>' + (item.nombre_hospital || '') + '</td>' +
+                            '<td><button type="button" class="btn btn-success btn-bio btn-sm" onclick="seleccionarCx(\'' + id + '\',\'' + item.id_cirugia + '\',\'' + (item.paciente || '').replace(/'/g,"\\'") + '\',\'' + (item.nombre_medico || '').replace(/'/g,"\\'") + '\')"><i class="bi bi-check-lg me-1"></i> Seleccionar</button></td>';
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(function() {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-2">Error al conectar con el servidor</td></tr>';
+                });
+        }
+
+        function seleccionarCx(id, plcCod, paciente, medico) {
+            document.getElementById('plc_cod-' + id).value = plcCod;
+            document.getElementById('input-paciente-' + id).value = paciente;
+            document.getElementById('input-medico-' + id).value = medico;
+
+            var badge = document.getElementById('cx-seleccionada-' + id);
+            document.getElementById('codigo-cx-' + id).textContent = '#' + plcCod;
+            badge.classList.remove('d-none');
+
+            var panel = document.getElementById('panel-buscar-' + id);
+            panel.style.display = 'none';
+        }
+
         function copiarLink(url) {
             navigator.clipboard.writeText(url).then(() => {
                 const toast = document.createElement('div');

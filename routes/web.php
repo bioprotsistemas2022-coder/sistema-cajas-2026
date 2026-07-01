@@ -53,6 +53,12 @@ Route::middleware(['auth', 'role:admin,deposito'])->group(function () {
 
     // Cancelar o postergar cirugía
     Route::post('/cirugias/{cirugia}/cancelar', [DepositoController::class, 'cancelar'])->name('cirugias.cancelar');
+
+    // Buscar procedimientos en API externa
+    Route::get('/procedimientos/buscar', [DepositoController::class, 'buscarProcedimientos'])->name('procedimientos.buscar');
+
+    // Reparación → Disponible
+    Route::post('/cajas/{caja}/disponibilizar', [DepositoController::class, 'disponibilizar'])->name('cajas.disponibilizar');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
