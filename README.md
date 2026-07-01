@@ -1,3 +1,5 @@
+PRUEBA
+
 # Bioimplant — Sistema de Gestión y Trazabilidad de Cajas Quirúrgicas
 
 Sistema web para administrar el ciclo de vida completo de cajas de instrumental quirúrgico en un centro médico. Desarrollado en **Laravel 12** con **Bootstrap 5** y **MySQL**.
