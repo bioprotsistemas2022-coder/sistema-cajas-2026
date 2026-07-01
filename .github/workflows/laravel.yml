@@ -31,5 +31,6 @@ jobs:
         DB_PASSWORD: B1opr0t456!
       run: git pull origin master
     - name: Run Tests
+      run: vendor/bin/phpunit --coverage-text --colors=never
       
       
