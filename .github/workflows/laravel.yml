@@ -18,6 +18,12 @@ jobs:
         port: 22
         script: |
           cd /var/www/html/sistemaCajas2026/sistema-cajas-2026/
+
+          # Detener servidor Laravel (tmux)
+          tmux send-keys -t laravel C-c
+          sleep 2
+
+          # Traer cambios
           git pull origin master
           composer install --no-dev --optimize-autoloader --no-interaction
           npm install
@@ -26,3 +32,6 @@ jobs:
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
+
+          # Reiniciar servidor Laravel (tmux)
+          tmux send-keys -t laravel "php artisan serve" Enter
