@@ -25,9 +25,23 @@ jobs:
 
           # Traer cambios
           git pull origin master
+
+          # Reemplazar .env con .env.example y setear credenciales de producción
+          cp .env.example .env
+          sed -i "s|APP_URL=.*|APP_URL=http://74.50.120.7/|" .env
+          sed -i "s|DB_CONNECTION=.*|DB_CONNECTION=mysql|" .env
+          sed -i "s|DB_HOST=.*|DB_HOST=127.0.0.1|" .env
+          sed -i "s|DB_PORT=.*|DB_PORT=3306|" .env
+          sed -i "s|DB_DATABASE=.*|DB_DATABASE=sistemas_caja|" .env
+          sed -i "s|DB_USERNAME=.*|DB_USERNAME=userCajas|" .env
+          sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=MO-b0g/YEWPVTD(3|" .env
+          sed -i "s|API_PROCEDURE_TOKEN=.*|API_PROCEDURE_TOKEN=ruzEahuW4ysZgL1HJLXpkffDEgperHmeK1UwtwHpp3fYPWW7n6m9cysP5BPJwB8VZC7Ad82t6xjHuaU8|" .env
+
           composer install --no-dev --optimize-autoloader --no-interaction
           npm install
           npm run build
+          # Generar APP_KEY solo si está vacío (no regenerar en cada deploy para no invalidar sesiones)
+          grep -q "^APP_KEY=$" .env && php artisan key:generate --force || true
           php artisan migrate --force
           php artisan config:cache
           php artisan route:cache
