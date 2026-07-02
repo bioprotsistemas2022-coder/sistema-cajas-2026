@@ -193,62 +193,63 @@
                     </div>
                     <form action="{{ route('cajas.egreso', $caja) }}" method="POST" enctype="multipart/form-data">
                         @csrf
-                        <div class="modal-body px-4 py-4">
-                            <div class="row g-4">
+                        <div class="modal-body px-4 py-4" style="position:relative;min-height:380px;">
+
+                            {{-- Overlay de búsqueda externa --}}
+                            <div id="search-overlay-{{ $caja->id }}" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#fff;z-index:10;padding:1.5rem;overflow-y:auto;border-radius:0.375rem;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="cerrarBusqueda('{{ $caja->id }}')">
+                                    <i class="bi bi-arrow-left me-1"></i> Volver a datos de cirugía
+                                </button>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-3">
+                                        <label class="form-label form-label-bio small">Fecha Desde</label>
+                                        <input type="date" id="bfecha_desde-{{ $caja->id }}" class="form-control form-control-bio">
+                                    </div>
+                                    <div class="col-3">
+                                        <label class="form-label form-label-bio small">Fecha Hasta</label>
+                                        <input type="date" id="bfecha_hasta-{{ $caja->id }}" class="form-control form-control-bio">
+                                    </div>
+                                    <div class="col-3">
+                                        <label class="form-label form-label-bio small">Paciente</label>
+                                        <input type="text" id="bpaciente-{{ $caja->id }}" class="form-control form-control-bio" placeholder="Nombre">
+                                    </div>
+                                    <div class="col-3">
+                                        <label class="form-label form-label-bio small">Médico</label>
+                                        <input type="text" id="bmedico-{{ $caja->id }}" class="form-control form-control-bio" placeholder="Dr.">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-primary btn-bio mb-3" onclick="buscarProcedimientos('{{ $caja->id }}')">
+                                    <i class="bi bi-search me-1"></i> Buscar
+                                </button>
+                                <div id="resultados-{{ $caja->id }}" style="display:none;">
+                                    <div class="table-responsive" style="max-height:400px;overflow-y:auto;">
+                                        <table class="table table-bio mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>PlcCod</th>
+                                                    <th>Fecha</th>
+                                                    <th>Paciente</th>
+                                                    <th>Médico</th>
+                                                    <th>Hospital</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tabla-resultados-{{ $caja->id }}"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="form-content-{{ $caja->id }}">
+                                <div class="row g-4">
                                 <div class="col-md-6">
                                     <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-person me-1" style="color:#3b82f6;"></i> Datos de la Cirugía</h6>
 
                                     {{-- Buscador en API externa --}}
                                     <div class="mb-3">
-                                        <button type="button" class="btn btn-outline-info btn-bio btn-sm w-100" onclick="toggleBuscar('{{ $caja->id }}')">
+                                        <button type="button" class="btn btn-outline-info btn-bio btn-sm w-100" onclick="abrirBusqueda('{{ $caja->id }}')">
                                             <i class="bi bi-search me-1"></i> Buscar en sistema externo
                                         </button>
-                                    </div>
-
-                                    <div id="panel-buscar-{{ $caja->id }}" style="display:none;" class="mb-3 p-3 rounded-3 bg-light border">
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <label class="form-label form-label-bio small">Fecha Desde</label>
-                                                <input type="date" id="bfecha_desde-{{ $caja->id }}" class="form-control form-control-bio form-control-sm">
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label form-label-bio small">Fecha Hasta</label>
-                                                <input type="date" id="bfecha_hasta-{{ $caja->id }}" class="form-control form-control-bio form-control-sm">
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label form-label-bio small">Paciente</label>
-                                                <input type="text" id="bpaciente-{{ $caja->id }}" class="form-control form-control-bio form-control-sm" placeholder="Nombre">
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label form-label-bio small">Médico</label>
-                                                <input type="text" id="bmedico-{{ $caja->id }}" class="form-control form-control-bio form-control-sm" placeholder="Dr.">
-                                            </div>
-                                            <div class="col-12 mt-2">
-                                                <button type="button" class="btn btn-primary btn-bio btn-sm w-100" onclick="buscarProcedimientos('{{ $caja->id }}')">
-                                                    <i class="bi bi-search me-1"></i> Buscar
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {{-- Resultados de búsqueda --}}
-                                        <div id="resultados-{{ $caja->id }}" class="mt-3" style="display:none;">
-                                            <hr class="my-2">
-                                            <div class="table-responsive" style="max-height:200px;overflow-y:auto;">
-                                                <table class="table table-sm table-bio mb-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>PlcCod</th>
-                                                            <th>Fecha</th>
-                                                            <th>Paciente</th>
-                                                            <th>Médico</th>
-                                                            <th>Hospital</th>
-                                                            <th></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="tabla-resultados-{{ $caja->id }}"></tbody>
-                                                </table>
-                                            </div>
-                                        </div>
                                     </div>
 
                                     {{-- Badge de CX seleccionada --}}
@@ -276,7 +277,7 @@
                                     <div id="tecnico-registrado-{{ $caja->id }}">
                                         <div class="mb-3">
                                             <label class="form-label form-label-bio">Técnico</label>
-                                            <select name="tecnico_id" class="form-select form-control-bio">
+                                            <select name="tecnico_id" class="form-select form-control-bio" required>
                                                 <option value="">Seleccionar...</option>
                                                 @foreach($tecnicos as $tecnico)
                                                     <option value="{{ $tecnico->id }}">{{ $tecnico->name }}</option>
@@ -336,6 +337,7 @@
                                         </div>
                                     @endif
                                 </div>
+                            </div>
                             </div>
                         </div>
                         <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
@@ -625,9 +627,19 @@
     @endforeach
 
     <script>
-        function toggleBuscar(id) {
-            const panel = document.getElementById('panel-buscar-' + id);
-            panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        function abrirBusqueda(id) {
+            document.getElementById('form-content-' + id).style.display = 'none';
+            document.getElementById('search-overlay-' + id).style.display = '';
+            document.getElementById('bfecha_desde-' + id).value = '';
+            document.getElementById('bfecha_hasta-' + id).value = '';
+            document.getElementById('bpaciente-' + id).value = '';
+            document.getElementById('bmedico-' + id).value = '';
+            document.getElementById('resultados-' + id).style.display = 'none';
+        }
+
+        function cerrarBusqueda(id) {
+            document.getElementById('form-content-' + id).style.display = '';
+            document.getElementById('search-overlay-' + id).style.display = 'none';
         }
 
         function buscarProcedimientos(id) {
@@ -681,8 +693,7 @@
             document.getElementById('codigo-cx-' + id).textContent = '#' + plcCod;
             badge.classList.remove('d-none');
 
-            var panel = document.getElementById('panel-buscar-' + id);
-            panel.style.display = 'none';
+            cerrarBusqueda(id);
         }
 
         function copiarLink(url) {
