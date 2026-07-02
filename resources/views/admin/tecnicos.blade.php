@@ -34,7 +34,7 @@
                 </div>
             </div>
             <button class="btn btn-primary btn-bio btn-sm px-4" data-bs-toggle="modal" data-bs-target="#modal-crear">
-                <i class="bi bi-plus-lg me-1"></i> Nuevo Técnico
+                <i class="bi bi-plus-lg me-1"></i> Nuevo Usuario
             </button>
         </div>
 
@@ -86,12 +86,19 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
                 <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-plus me-2" style="color:#3b82f6;"></i>Nuevo Técnico</h5>
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-plus me-2" style="color:#3b82f6;"></i>Nuevo Usuario</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form method="POST" action="{{ route('admin.tecnicos.store') }}">
                     @csrf
                     <div class="modal-body px-4 py-4">
+                        <div class="mb-3">
+                            <label class="form-label form-label-bio">Rol</label>
+                            <select name="role" class="form-select form-control-bio" required>
+                                <option value="tecnico">Técnico</option>
+                                <option value="logistica">Logística</option>
+                            </select>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label form-label-bio">Nombre Completo</label>
                             <input type="text" name="name" required class="form-control form-control-bio" placeholder="Nombre y apellido">

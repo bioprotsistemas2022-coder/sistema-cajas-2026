@@ -7,8 +7,8 @@
                 <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
                     <i class="bi bi-truck fs-3" style="color:#d97706;"></i>
                 </div>
-                <div class="stat-value mb-1" style="color:#92400e;">{{ $cajasEnTransito->count() }}</div>
-                <div class="stat-label" style="color:#92400e;">En Tránsito</div>
+                <div class="stat-value mb-1" style="color:#92400e;">{{ $cajasEnTransitoVuelta->count() }}</div>
+                <div class="stat-label" style="color:#92400e;">En Tránsito Vuelta</div>
             </div>
         </div>
         <div class="col-md-4">
@@ -25,7 +25,7 @@
                 <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
                     <i class="bi bi-arrow-left-right fs-3 text-primary"></i>
                 </div>
-                <div class="stat-value mb-1 text-primary">{{ $cajasEnTransito->count() + $cajasPendientes->count() }}</div>
+                <div class="stat-value mb-1 text-primary">{{ $cajasEnTransitoVuelta->count() + $cajasPendientes->count() }}</div>
                 <div class="stat-label text-primary">Total en Proceso</div>
             </div>
         </div>
@@ -35,13 +35,13 @@
         <div class="col-md-6">
             <div class="card card-elegante h-100">
                 <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
-                    <h5 class="mb-0" style="color:#92400e;"><i class="bi bi-truck me-2" style="color:#d97706;"></i>En Tránsito</h5>
+                    <h5 class="mb-0" style="color:#92400e;"><i class="bi bi-truck me-2" style="color:#d97706;"></i>En Tránsito Vuelta</h5>
                     <span class="badge" style="background:rgba(255,255,255,0.8);color:#92400e;font-weight:700;padding:0.5em 1em;border-radius:50rem;">
-                        {{ $cajasEnTransito->count() }}
+                        {{ $cajasEnTransitoVuelta->count() }}
                     </span>
                 </div>
                 <div class="card-body p-0">
-                    @forelse($cajasEnTransito as $caja)
+                    @forelse($cajasEnTransitoVuelta as $caja)
                         <div class="d-flex align-items-center justify-content-between px-4 py-3 border-bottom" style="transition:all 0.15s ease;">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="d-flex align-items-center justify-content-center rounded-3" style="width:42px;height:42px;background:linear-gradient(135deg,#fef3c7,#fde68a);">

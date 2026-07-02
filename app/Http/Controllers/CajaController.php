@@ -18,7 +18,7 @@ class CajaController extends Controller
 
     public function show(Caja $caja)
     {
-        $caja->load('eventos.user', 'cirugias', 'imagenes');
+        $caja->load(['eventos.user', 'cirugias.consumos', 'imagenes']);
         return view('cajas.show', compact('caja'));
     }
 

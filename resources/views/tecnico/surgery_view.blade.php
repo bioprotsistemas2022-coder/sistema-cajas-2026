@@ -66,10 +66,10 @@
         </div>
     </div>
 
-    @if($cirugia->bioimplant_id)
-        <div class="d-flex justify-content-between align-items-center py-3 mb-4" style="border-top:2px solid #e2e8f0;border-bottom:2px solid #e2e8f0;">
-            <span class="small fw-bold text-uppercase tracking-wide" style="color:#94a3b8;">Project ID</span>
-            <code style="background:#f8fafc;padding:0.3em 0.7em;border-radius:8px;font-size:0.8rem;color:#475569;font-weight:600;">{{ $cirugia->bioimplant_id }}</code>
+    @if($cirugia->observaciones)
+        <div class="p-3 mb-4" style="background:#fffbeb;border:1px solid #fde68a;border-radius:16px;">
+            <p class="small fw-bold mb-1" style="color:#92400e;"><i class="bi bi-info-circle me-1"></i>Observaciones</p>
+            <p class="mb-0" style="color:#78350f;font-size:0.9rem;">{{ $cirugia->observaciones }}</p>
         </div>
     @endif
 
@@ -83,7 +83,7 @@
                 </div>
             @endunless
             <button type="submit" class="btn btn-lg w-100 py-3 btn-bio" style="background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;font-weight:700;font-size:0.95rem;">
-                <i class="bi bi-geo-alt me-2"></i> Confirmar Arribo
+                <i class="bi bi-geo-alt me-2"></i> Comenzar Cirugía
             </button>
         </form>
     @endif
@@ -127,8 +127,11 @@
             <div style="width:80px;height:80px;background:linear-gradient(135deg,#10b981,#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;color:#fff;font-size:2rem;box-shadow:0 10px 30px rgba(16,185,129,0.3);">
                 <i class="bi bi-check-circle-fill"></i>
             </div>
-            <h4 class="fw-bold mb-2" style="color:#065f46;">Logística Finalizada</h4>
+            <h4 class="fw-bold mb-2" style="color:#065f46;">Cirugía Finalizada</h4>
             <p class="small mb-0" style="color:#10b981;">El reporte ha sido procesado exitosamente</p>
+            <a href="{{ route('dashboard') }}" class="btn btn-bio mt-4 px-5 py-2" style="background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;font-weight:600;border-radius:50rem;">
+                <i class="bi bi-arrow-left me-2"></i> Volver al Dashboard
+            </a>
         </div>
     @elseif($cirugia->status == 'CANCELADA' || $cirugia->status == 'POSTPUESTA')
         <div class="text-center py-5" style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border-radius:20px;">
