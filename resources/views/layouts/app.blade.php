@@ -55,6 +55,13 @@
                                 </a>
                             </li>
                         @endif
+                        @if(in_array($role, ['admin', 'logistica']))
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('logistica.*') ? 'active' : '' }}" href="{{ route('logistica.dashboard') }}">
+                                    <i class="bi bi-truck me-1"></i> Logística
+                                </a>
+                            </li>
+                        @endif
                         @if(in_array($role, ['admin', 'acondicionador']))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('acondicionador.*') ? 'active' : '' }}" href="{{ route('acondicionador.dashboard') }}">

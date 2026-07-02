@@ -11,9 +11,9 @@ class ConsumoController extends Controller
 {
     public function index()
     {
-        $cajasEnTransito = Caja::where('estado', 'EN TRANSITO')->get();
+        $cajasEnTransitoVuelta = Caja::where('estado', 'EN TRANSITO VUELTA')->get();
         $cajasPendientes = Caja::where('estado', 'PENDIENTE')->get();
-        return view('consumo.dashboard', compact('cajasEnTransito', 'cajasPendientes'));
+        return view('consumo.dashboard', compact('cajasEnTransitoVuelta', 'cajasPendientes'));
     }
 
     public function controlar(Request $request, Caja $caja)

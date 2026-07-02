@@ -31,8 +31,8 @@ class DepositoController extends Controller
         $request->validate([
             'paciente' => 'required|string',
             'medico' => 'required|string',
-            'bioimplant_id' => 'nullable|string',
             'plc_cod' => 'nullable|string',
+            'observaciones' => 'nullable|string',
         ]);
 
         if (!BoxStateService::canTransition($caja, 'EN ESTERILIZADORA')) {
@@ -42,8 +42,8 @@ class DepositoController extends Controller
         $cirugiaData = [
             'paciente' => $request->paciente,
             'medico' => $request->medico,
-            'bioimplant_id' => $request->bioimplant_id,
             'plc_cod' => $request->plc_cod,
+            'observaciones' => $request->observaciones,
             'fecha_cx' => now(),
             'status' => 'PENDIENTE'
         ];

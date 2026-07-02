@@ -69,7 +69,7 @@ class TecnicoController extends Controller
         }
 
         foreach ($cirugia->cajas as $caja) {
-            BoxStateService::transition($caja, 'EN TRANSITO', $userId, $data);
+            BoxStateService::transition($caja, 'CX FINALIZADA', $userId, $data);
 
             Consumo::create([
                 'cirugia_id' => $cirugia->id,

@@ -30,9 +30,15 @@
                         </div>
                     </div>
                     <div class="col-3">
+                        <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
+                            <div class="stat-value mb-1" style="color:#5b21b6;">{{ $cajas->where('estado', 'CX FINALIZADA')->count() }}</div>
+                            <div class="stat-label" style="color:#5b21b6;">CX Finalizada</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
-                            <div class="stat-value text-warning mb-1">{{ $cajas->where('estado', 'EN TRANSITO')->count() }}</div>
-                            <div class="stat-label text-warning">En Tránsito</div>
+                            <div class="stat-value text-warning mb-1">{{ $cajas->where('estado', 'EN TRANSITO VUELTA')->count() }}</div>
+                            <div class="stat-label text-warning">Tránsito Vuelta</div>
                         </div>
                     </div>
                     <div class="col-3">
@@ -86,7 +92,8 @@
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="DISPONIBLE" onclick="filtrarTabla('DISPONIBLE')">Disponibles</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN ESTERILIZADORA" onclick="filtrarTabla('EN ESTERILIZADORA')">Esterilización</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN CX" onclick="filtrarTabla('EN CX')">Cirugía</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN TRANSITO" onclick="filtrarTabla('EN TRANSITO')">Tránsito</button>
+                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="CX FINALIZADA" onclick="filtrarTabla('CX FINALIZADA')">CX Finalizada</button>
+                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN TRANSITO VUELTA" onclick="filtrarTabla('EN TRANSITO VUELTA')">Tránsito Vuelta</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="PENDIENTE" onclick="filtrarTabla('PENDIENTE')">Auditoría</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="ACONDICIONAMIENTO" onclick="filtrarTabla('ACONDICIONAMIENTO')">Lavado</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN REPARACION" onclick="filtrarTabla('EN REPARACION')">Reparación</button>
@@ -117,8 +124,9 @@
                                         $estilos = [
                                             'DISPONIBLE' => 'badge-success',
                                             'EN ESTERILIZADORA' => 'badge-primary',
-                                            'EN CX' => 'badge-dark',
-                                            'EN TRANSITO' => 'badge-warning',
+            'EN CX' => 'badge-dark',
+            'CX FINALIZADA' => 'badge-dark',
+            'EN TRANSITO VUELTA' => 'badge-warning',
                                             'PENDIENTE' => 'badge-warning',
                                             'ACONDICIONAMIENTO' => 'badge-info',
                                             'EN REPARACION' => 'badge-danger',
@@ -138,7 +146,7 @@
                                             <i class="bi bi-calendar-plus me-1"></i> Asignar
                                         </button>
                                     @endif
-                                    @if(in_array($caja->estado, ['EN TRANSITO', 'PENDIENTE']))
+                                    @if($caja->estado == 'PENDIENTE')
                                         <button type="button" class="btn btn-warning btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-delegar-{{ $caja->id }}">
                                             <i class="bi bi-send me-1"></i> Delegar
                                         </button>
@@ -294,8 +302,8 @@
                                         </div>
                                     </div>
                                     <div class="mt-3">
-                                        <label class="form-label form-label-bio">ID Bioimplant <span class="text-muted fw-normal">(opcional)</span></label>
-                                        <input type="text" name="bioimplant_id" class="form-control form-control-bio" placeholder="Número de proyecto">
+                                        <label class="form-label form-label-bio">Observaciones</label>
+                                        <textarea name="observaciones" rows="3" class="form-control form-control-bio" placeholder="Notas para el técnico u otros grupos..."></textarea>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -425,7 +433,7 @@
         </div>
     @endforeach
 
-    @foreach($cajas->whereIn('estado', ['EN TRANSITO', 'PENDIENTE']) as $caja)
+    @foreach($cajas->where('estado', 'PENDIENTE') as $caja)
         <div class="modal fade" id="modal-delegar-{{ $caja->id }}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -442,7 +450,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label form-label-bio">Acción a delegar</label>
-                                @if($caja->estado === 'EN TRANSITO')
+                                @if($caja->estado === 'EN TRANSITO VUELTA')
                                     <input type="hidden" name="accion" value="consumo.controlar">
                                     <div class="alert alert-info py-2 px-3 small mb-0">
                                         <i class="bi bi-arrow-down-circle me-1"></i> Recibir caja e iniciar control
@@ -455,7 +463,7 @@
                                     </select>
                                 @endif
                             </div>
-                            @if($caja->estado !== 'EN TRANSITO')
+                            @if($caja->estado !== 'EN TRANSITO VUELTA')
                                 <input type="hidden" name="resultado" id="resultado-delegar-{{ $caja->id }}" value="">
                             @endif
                         </div>
