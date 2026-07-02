@@ -49,6 +49,7 @@ class DepositoController extends Controller
         ];
 
         if ($request->tipo_tecnico === 'externo') {
+            $request->validate(['tecnico_nombre' => 'required|string']);
             $cirugiaData['tecnico_id'] = null;
             $cirugiaData['tecnico_nombre'] = $request->tecnico_nombre;
         } else {
