@@ -33,4 +33,9 @@ class Caja extends Model
     {
         return $this->hasMany(CajaImagen::class)->orderByDesc('created_at');
     }
+
+    public function grupos()
+    {
+        return $this->belongsToMany(Grupo::class, 'grupo_caja');
+    }
 }

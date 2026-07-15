@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Caja;
 use App\Models\CajaImagen;
 use App\Models\Cirugia;
+use App\Models\Grupo;
 use App\Models\TokensAccion;
 use App\Models\User;
 use App\Services\BoxStateService;
@@ -23,7 +24,9 @@ class DepositoController extends Controller
             ->where('expires_at', '>', now())
             ->get()
             ->keyBy('caja_id');
-        return view('deposito.dashboard', compact('cajas', 'tecnicos', 'tokensActivos'));
+        $grupos = Grupo::with('cajas')->get();
+        $cajasDisponibles = Caja::where('estado', 'DISPONIBLE')->orderBy('nombre')->get();
+        return view('deposito.dashboard', compact('cajas', 'tecnicos', 'tokensActivos', 'grupos', 'cajasDisponibles'));
     }
 
     public function egreso(Request $request, Caja $caja)
@@ -208,6 +211,73 @@ class DepositoController extends Controller
         ]);
 
         return back()->with('success', "{$caja->nombre} está nuevamente Disponible.");
+    }
+
+    public function egresoGrupo(Request $request, Grupo $grupo)
+    {
+        $request->validate([
+            'paciente' => 'required|string',
+            'medico' => 'required|string',
+            'plc_cod' => 'nullable|string',
+            'observaciones' => 'nullable|string',
+        ]);
+
+        $cirugiaData = [
+            'paciente' => $request->paciente,
+            'medico' => $request->medico,
+            'plc_cod' => $request->plc_cod,
+            'observaciones' => $request->observaciones,
+            'fecha_cx' => now(),
+            'status' => 'PENDIENTE'
+        ];
+
+        if ($request->tipo_tecnico === 'externo') {
+            $request->validate(['tecnico_nombre' => 'required|string']);
+            $cirugiaData['tecnico_id'] = null;
+            $cirugiaData['tecnico_nombre'] = $request->tecnico_nombre;
+        } else {
+            $request->validate(['tecnico_id' => 'required|exists:users,id']);
+            $cirugiaData['tecnico_id'] = $request->tecnico_id;
+        }
+
+        $cirugia = Cirugia::create($cirugiaData);
+
+        $asignadas = 0;
+        $omitidas = 0;
+        $omitidasNombres = [];
+
+        foreach ($grupo->cajas as $caja) {
+            if (!BoxStateService::canTransition($caja, 'EN ESTERILIZADORA')) {
+                $omitidas++;
+                $omitidasNombres[] = $caja->nombre . ' (' . $caja->codigo_interno . ')';
+                continue;
+            }
+
+            $cirugia->cajas()->attach($caja->id);
+
+            $obs = "Egreso grupal hacia esterilizadora para CX de {$request->paciente} (Grupo: {$grupo->nombre})";
+            if ($request->plc_cod) {
+                $obs .= " [PlcCod:{$request->plc_cod}]";
+            }
+            BoxStateService::transition($caja, 'EN ESTERILIZADORA', auth()->id(), [
+                'observaciones' => $obs,
+            ]);
+
+            $asignadas++;
+        }
+
+        $successMsg = "{$asignadas} caja(s) asignada(s) a la cirugía";
+        if ($omitidas > 0) {
+            $successMsg .= ". {$omitidas} caja(s) omitida(s) por no estar disponible: " . implode(', ', $omitidasNombres);
+        }
+        $successMsg .= '.';
+
+        if ($request->tipo_tecnico === 'externo') {
+            $url = route('tecnico.surgery.view', [$cirugia, $cirugia->access_token]);
+            $successMsg .= " Link para técnico externo: <a href='{$url}' target='_blank' class='fw-bold text-white'>{$url}</a>";
+        }
+
+        return back()->with('success', $successMsg);
     }
 
     public function buscarProcedimientos(Request $request, ProcedureApiService $api)

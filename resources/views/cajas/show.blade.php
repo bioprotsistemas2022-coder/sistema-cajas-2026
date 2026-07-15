@@ -42,6 +42,18 @@
                         <label class="form-label form-label-bio">Cirugías</label>
                         <p class="mb-0">{{ $caja->cirugias->count() }}</p>
                     </div>
+                    @if($caja->relationLoaded('grupos') && $caja->grupos->isNotEmpty())
+                    <div class="mb-4">
+                        <label class="form-label form-label-bio">Grupos</label>
+                        <div>
+                            @foreach($caja->grupos as $grp)
+                                <span class="badge" style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-radius:50rem;font-size:0.75rem;margin-bottom:2px;">
+                                    <i class="bi bi-boxes me-1"></i>{{ $grp->nombre }}
+                                </span>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
                     <div class="mb-4">
                         <label class="form-label form-label-bio">Imágenes</label>
                         <p class="mb-0">{{ $caja->imagenes->count() }}</p>

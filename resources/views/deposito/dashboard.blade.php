@@ -83,6 +83,9 @@
                     </span>
                     <input type="text" id="buscador" class="form-control border-0 bg-light" placeholder="Buscar nombre o código...">
                 </div>
+                <button type="button" class="btn btn-info btn-bio" data-bs-toggle="modal" data-bs-target="#modal-egreso-grupo">
+                    <i class="bi bi-boxes me-1"></i> Egreso por Grupo
+                </button>
             </div>
         </div>
 
@@ -351,6 +354,95 @@
             </div>
         </div>
     @endforeach
+
+    {{-- Modal Egreso por Grupo --}}
+    <div class="modal fade" id="modal-egreso-grupo" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-boxes me-2" style="color:#3b82f6;"></i>Egreso por Grupo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="form-egreso-grupo" action="" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-body px-4 py-4">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-boxes me-1" style="color:#3b82f6;"></i> Grupo</h6>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Seleccionar Grupo</label>
+                                    <select name="grupo_id" id="select-grupo" class="form-select form-control-bio" required onchange="cargarCajasGrupo()">
+                                        <option value="">Seleccionar...</option>
+                                        @foreach($grupos as $grupo)
+                                            <option value="{{ $grupo->id }}" data-cajas='@json($grupo->cajas->pluck('id'))'>{{ $grupo->nombre }} ({{ $grupo->cajas->count() }} cajas)</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div id="info-grupo" style="display:none;">
+                                    <div class="mb-3">
+                                        <label class="form-label form-label-bio">Cajas del Grupo</label>
+                                        <div id="lista-cajas-grupo" class="table-responsive" style="max-height:250px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:12px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-person me-1" style="color:#3b82f6;"></i> Datos de la Cirugía</h6>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Paciente</label>
+                                    <input type="text" name="paciente" id="input-paciente-grupo" required class="form-control form-control-bio" placeholder="Nombre completo">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Médico</label>
+                                    <input type="text" name="medico" id="input-medico-grupo" required class="form-control form-control-bio" placeholder="Dr. / Dra.">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Tipo de Técnico</label>
+                                    <div class="d-flex gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="tipo_tecnico_grupo" value="registrado" id="tipo-reg-grupo" checked onchange="toggleTecnicoGrupo()">
+                                            <label class="form-check-label small" for="tipo-reg-grupo">Registrado</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="tipo_tecnico_grupo" value="externo" id="tipo-ext-grupo" onchange="toggleTecnicoGrupo()">
+                                            <label class="form-check-label small" for="tipo-ext-grupo">Externo (sin login)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="tecnico-registrado-grupo">
+                                    <div class="mb-3">
+                                        <label class="form-label form-label-bio">Técnico</label>
+                                        <select name="tecnico_id" class="form-select form-control-bio" required>
+                                            <option value="">Seleccionar...</option>
+                                            @foreach($tecnicos as $tecnico)
+                                                <option value="{{ $tecnico->id }}">{{ $tecnico->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="tecnico-externo-grupo" style="display:none;">
+                                    <div class="mb-3">
+                                        <label class="form-label form-label-bio">Nombre del Externo</label>
+                                        <input type="text" name="tecnico_nombre" class="form-control form-control-bio" placeholder="Nombre completo del técnico externo">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Observaciones</label>
+                                    <textarea name="observaciones" rows="3" class="form-control form-control-bio" placeholder="Notas para el técnico u otros grupos..."></textarea>
+                                </div>
+                                <input type="hidden" name="plc_cod" id="plc_cod-grupo" value="">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
+                        <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary btn-bio px-4" id="btn-egreso-grupo" disabled>
+                            <i class="bi bi-check-lg me-1"></i> Confirmar Egreso del Grupo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     {{-- Modal Reparar --}}
     @foreach($cajas->whereIn('estado', ['DISPONIBLE', 'EN ESTERILIZADORA', 'EN CX', 'PENDIENTE']) as $caja)
@@ -717,6 +809,65 @@
             const input = ext.querySelector('input');
             if (select) select.required = !esExterno;
             if (input) input.required = esExterno;
+        }
+
+        function toggleTecnicoGrupo() {
+            const reg = document.getElementById('tecnico-registrado-grupo');
+            const ext = document.getElementById('tecnico-externo-grupo');
+            const esExterno = document.getElementById('tipo-ext-grupo').checked;
+            reg.style.display = esExterno ? 'none' : '';
+            ext.style.display = esExterno ? '' : 'none';
+            const select = reg.querySelector('select');
+            const input = ext.querySelector('input');
+            if (select) select.required = !esExterno;
+            if (input) input.required = esExterno;
+        }
+
+        function cargarCajasGrupo() {
+            const select = document.getElementById('select-grupo');
+            const grupoId = select.value;
+            const contenedor = document.getElementById('lista-cajas-grupo');
+            const infoDiv = document.getElementById('info-grupo');
+            const btn = document.getElementById('btn-egreso-grupo');
+            const form = document.getElementById('form-egreso-grupo');
+
+            if (!grupoId) {
+                infoDiv.style.display = 'none';
+                btn.disabled = true;
+                return;
+            }
+
+            form.action = '{{ url("grupos") }}/' + grupoId + '/egreso';
+
+            const option = select.options[select.selectedIndex];
+            let cajas = [];
+            try {
+                cajas = JSON.parse(option.getAttribute('data-cajas') || '[]');
+            } catch(e) { cajas = []; }
+
+            infoDiv.style.display = '';
+
+            const cajasData = @json($cajasDisponibles->keyBy('id'));
+            const allCajas = @json($cajas->keyBy('id'));
+
+            let html = '<table class="table table-sm table-bio mb-0"><thead><tr><th>Nombre</th><th>Código</th><th>Estado</th></tr></thead><tbody>';
+            let allAvailable = true;
+
+            cajas.forEach(function(cajaId) {
+                const caja = allCajas[cajaId];
+                if (!caja) return;
+                const disponible = caja.estado === 'DISPONIBLE';
+                if (!disponible) allAvailable = false;
+                const badgeClass = disponible ? 'badge-success' : 'badge-secondary';
+                const estadoHtml = disponible
+                    ? '<span class="badge badge-estado badge-success">DISPONIBLE</span>'
+                    : '<span class="badge badge-estado badge-secondary">' + caja.estado + ' — se omitirá</span>';
+                html += '<tr class="' + (disponible ? '' : 'text-muted') + '"><td><small>' + caja.nombre + '</small></td><td><code>' + caja.codigo_interno + '</code></td><td>' + estadoHtml + '</td></tr>';
+            });
+
+            html += '</tbody></table>';
+            contenedor.innerHTML = html;
+            btn.disabled = false;
         }
 
         function toggleReasignar(id) {
