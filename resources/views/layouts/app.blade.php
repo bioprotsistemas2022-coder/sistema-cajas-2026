@@ -71,6 +71,13 @@
                                 </a>
                             </li>
                         @endif
+                        @if(in_array($role, ['admin', 'deposito']))
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('admin.grupos') ? 'active' : '' }}" href="{{ route('admin.grupos') }}">
+                                    <i class="bi bi-boxes me-1"></i> Grupos
+                                </a>
+                            </li>
+                        @endif
                         @if(in_array($role, ['admin', 'tecnico']))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('tecnico.dashboard') ? 'active' : '' }}" href="{{ route('tecnico.dashboard') }}">

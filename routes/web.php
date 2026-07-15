@@ -9,6 +9,7 @@ use App\Http\Controllers\LogisticaController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\AdminTecnicoController;
 use App\Http\Controllers\AdminCajaController;
+use App\Http\Controllers\GrupoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -61,6 +62,13 @@ Route::middleware(['auth', 'role:admin,deposito'])->group(function () {
 
     // Reparación → Disponible
     Route::post('/cajas/{caja}/disponibilizar', [DepositoController::class, 'disponibilizar'])->name('cajas.disponibilizar');
+
+    // Grupos
+    Route::get('/admin/grupos', [GrupoController::class, 'index'])->name('admin.grupos');
+    Route::post('/admin/grupos', [GrupoController::class, 'store'])->name('admin.grupos.store');
+    Route::put('/admin/grupos/{grupo}', [GrupoController::class, 'update'])->name('admin.grupos.update');
+    Route::delete('/admin/grupos/{grupo}', [GrupoController::class, 'destroy'])->name('admin.grupos.destroy');
+    Route::post('/grupos/{grupo}/egreso', [DepositoController::class, 'egresoGrupo'])->name('grupos.egreso');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
