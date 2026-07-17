@@ -23,7 +23,7 @@
                         @php
                             $estilos = [
                                 'DISPONIBLE' => 'badge-success','EN ESTERILIZADORA' => 'badge-primary',
-                                'EN CX' => 'badge-dark','EN TRANSITO' => 'badge-warning',
+                                'EN CX' => 'badge-dark','CX FINALIZADA' => 'badge-dark','EN TRANSITO VUELTA' => 'badge-warning',
                                 'PENDIENTE' => 'badge-warning','ACONDICIONAMIENTO' => 'badge-info',
                                 'EN REPARACION' => 'badge-danger','BAJA' => 'badge-secondary',
                             ];
@@ -42,6 +42,18 @@
                         <label class="form-label form-label-bio">Cirugías</label>
                         <p class="mb-0">{{ $caja->cirugias->count() }}</p>
                     </div>
+                    @if($caja->relationLoaded('grupos') && $caja->grupos->isNotEmpty())
+                    <div class="mb-4">
+                        <label class="form-label form-label-bio">Grupos</label>
+                        <div>
+                            @foreach($caja->grupos as $grp)
+                                <span class="badge" style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-radius:50rem;font-size:0.75rem;margin-bottom:2px;">
+                                    <i class="bi bi-boxes me-1"></i>{{ $grp->nombre }}
+                                </span>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
                     <div class="mb-4">
                         <label class="form-label form-label-bio">Imágenes</label>
                         <p class="mb-0">{{ $caja->imagenes->count() }}</p>
@@ -124,6 +136,57 @@
                                 </div>
                             @endforeach
                         </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="card card-elegante mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-heart-pulse me-2" style="color:#ef4444;"></i>Cirugías Realizadas</h5>
+                </div>
+                <div class="card-body p-0">
+                    @php $hasCirugias = $caja->cirugias->isNotEmpty(); @endphp
+                    @if(!$hasCirugias)
+                        <div class="text-center py-4"><p class="text-muted mb-0 small">Sin cirugías registradas</p></div>
+                    @else
+                        @foreach($caja->cirugias->sortByDesc('created_at') as $cirugia)
+                            @php $consumo = $cirugia->consumos->where('caja_id', $caja->id)->first(); @endphp
+                            <div class="p-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <div class="fw-semibold" style="color:#0f172a;">{{ $cirugia->paciente }}</div>
+                                        <small style="color:#94a3b8;">Dr. {{ $cirugia->medico }} · {{ $cirugia->fecha_cx?->format('d/m/Y') }}</small>
+                                    </div>
+                                    <span class="badge badge-estado
+                                        @if($cirugia->status == 'COMPLETADA') badge-success
+                                        @elseif($cirugia->status == 'EN_CURSO') badge-primary
+                                        @elseif($cirugia->status == 'CANCELADA') badge-secondary
+                                        @elseif($cirugia->status == 'POSTPUESTA') badge-warning
+                                        @else badge-dark @endif">
+                                        {{ $cirugia->status }}
+                                    </span>
+                                </div>
+                                @if($consumo && $cirugia->status == 'COMPLETADA')
+                                    @if($consumo->items)
+                                        <div class="mb-1">
+                                            <small class="fw-bold" style="color:#475569;">Consumos reportados:</small>
+                                            <p class="mb-0 small" style="color:#64748b;">{{ $consumo->items }}</p>
+                                        </div>
+                                    @endif
+                                    @if($consumo->observaciones)
+                                        <div>
+                                            <small class="fw-bold" style="color:#475569;">Minuta Final:</small>
+                                            <p class="mb-0 small" style="color:#64748b;">{{ $consumo->observaciones }}</p>
+                                        </div>
+                                    @endif
+                                @elseif($cirugia->observaciones && $cirugia->status != 'COMPLETADA')
+                                    <div>
+                                        <small class="fw-bold" style="color:#475569;">Observaciones:</small>
+                                        <p class="mb-0 small" style="color:#64748b;">{{ $cirugia->observaciones }}</p>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
                     @endif
                 </div>
             </div>

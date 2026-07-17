@@ -8,7 +8,6 @@ use Illuminate\Support\Str;
 class Cirugia extends Model
 {
     protected $fillable = [
-        'bioimplant_id',
         'plc_cod',
         'paciente',
         'medico',
@@ -18,6 +17,7 @@ class Cirugia extends Model
         'tecnico_id',
         'tecnico_nombre',
         'tecnico_original_id',
+        'observaciones',
         'access_token',
         'status'
     ];

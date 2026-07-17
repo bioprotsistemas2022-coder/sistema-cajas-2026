@@ -5,9 +5,11 @@ use App\Http\Controllers\DepositoController;
 use App\Http\Controllers\TecnicoController;
 use App\Http\Controllers\ConsumoController;
 use App\Http\Controllers\AcondicionadorController;
+use App\Http\Controllers\LogisticaController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\AdminTecnicoController;
 use App\Http\Controllers\AdminCajaController;
+use App\Http\Controllers\GrupoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -21,6 +23,7 @@ Route::get('/dashboard', function () {
         'deposito' => redirect()->route('deposito.dashboard'),
         'tecnico' => redirect()->route('tecnico.dashboard'),
         'consumo' => redirect()->route('consumo.dashboard'),
+        'logistica' => redirect()->route('logistica.dashboard'),
         'acondicionador' => redirect()->route('acondicionador.dashboard'),
         default => view('dashboard'),
     };
@@ -59,6 +62,13 @@ Route::middleware(['auth', 'role:admin,deposito'])->group(function () {
 
     // Reparación → Disponible
     Route::post('/cajas/{caja}/disponibilizar', [DepositoController::class, 'disponibilizar'])->name('cajas.disponibilizar');
+
+    // Grupos
+    Route::get('/admin/grupos', [GrupoController::class, 'index'])->name('admin.grupos');
+    Route::post('/admin/grupos', [GrupoController::class, 'store'])->name('admin.grupos.store');
+    Route::put('/admin/grupos/{grupo}', [GrupoController::class, 'update'])->name('admin.grupos.update');
+    Route::delete('/admin/grupos/{grupo}', [GrupoController::class, 'destroy'])->name('admin.grupos.destroy');
+    Route::post('/grupos/{grupo}/egreso', [DepositoController::class, 'egresoGrupo'])->name('grupos.egreso');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
@@ -89,6 +99,11 @@ Route::middleware(['auth', 'role:admin,consumo'])->group(function () {
     Route::get('/consumo', [ConsumoController::class, 'index'])->name('consumo.dashboard');
     Route::post('/consumo/{caja}/controlar', [ConsumoController::class, 'controlar'])->name('consumo.controlar');
     Route::post('/consumo/{caja}/finalizar', [ConsumoController::class, 'finalizar'])->name('consumo.finalizar');
+});
+
+Route::middleware(['auth', 'role:admin,logistica'])->group(function () {
+    Route::get('/logistica', [LogisticaController::class, 'index'])->name('logistica.dashboard');
+    Route::post('/logistica/{caja}/retirar', [LogisticaController::class, 'retirar'])->name('logistica.retirar');
 });
 
 Route::middleware(['auth', 'role:admin,acondicionador'])->group(function () {

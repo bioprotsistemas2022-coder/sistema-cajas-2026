@@ -30,9 +30,15 @@
                         </div>
                     </div>
                     <div class="col-3">
+                        <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
+                            <div class="stat-value mb-1" style="color:#5b21b6;">{{ $cajas->where('estado', 'CX FINALIZADA')->count() }}</div>
+                            <div class="stat-label" style="color:#5b21b6;">CX Finalizada</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
-                            <div class="stat-value text-warning mb-1">{{ $cajas->where('estado', 'EN TRANSITO')->count() }}</div>
-                            <div class="stat-label text-warning">En Tránsito</div>
+                            <div class="stat-value text-warning mb-1">{{ $cajas->where('estado', 'EN TRANSITO VUELTA')->count() }}</div>
+                            <div class="stat-label text-warning">Tránsito Vuelta</div>
                         </div>
                     </div>
                     <div class="col-3">
@@ -77,6 +83,9 @@
                     </span>
                     <input type="text" id="buscador" class="form-control border-0 bg-light" placeholder="Buscar nombre o código...">
                 </div>
+                <button type="button" class="btn btn-info btn-bio" data-bs-toggle="modal" data-bs-target="#modal-egreso-grupo">
+                    <i class="bi bi-boxes me-1"></i> Egreso por Grupo
+                </button>
             </div>
         </div>
 
@@ -86,7 +95,8 @@
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="DISPONIBLE" onclick="filtrarTabla('DISPONIBLE')">Disponibles</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN ESTERILIZADORA" onclick="filtrarTabla('EN ESTERILIZADORA')">Esterilización</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN CX" onclick="filtrarTabla('EN CX')">Cirugía</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN TRANSITO" onclick="filtrarTabla('EN TRANSITO')">Tránsito</button>
+                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="CX FINALIZADA" onclick="filtrarTabla('CX FINALIZADA')">CX Finalizada</button>
+                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN TRANSITO VUELTA" onclick="filtrarTabla('EN TRANSITO VUELTA')">Tránsito Vuelta</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="PENDIENTE" onclick="filtrarTabla('PENDIENTE')">Auditoría</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="ACONDICIONAMIENTO" onclick="filtrarTabla('ACONDICIONAMIENTO')">Lavado</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN REPARACION" onclick="filtrarTabla('EN REPARACION')">Reparación</button>
@@ -117,8 +127,9 @@
                                         $estilos = [
                                             'DISPONIBLE' => 'badge-success',
                                             'EN ESTERILIZADORA' => 'badge-primary',
-                                            'EN CX' => 'badge-dark',
-                                            'EN TRANSITO' => 'badge-warning',
+            'EN CX' => 'badge-dark',
+            'CX FINALIZADA' => 'badge-dark',
+            'EN TRANSITO VUELTA' => 'badge-warning',
                                             'PENDIENTE' => 'badge-warning',
                                             'ACONDICIONAMIENTO' => 'badge-info',
                                             'EN REPARACION' => 'badge-danger',
@@ -138,7 +149,7 @@
                                             <i class="bi bi-calendar-plus me-1"></i> Asignar
                                         </button>
                                     @endif
-                                    @if(in_array($caja->estado, ['EN TRANSITO', 'PENDIENTE']))
+                                    @if($caja->estado == 'PENDIENTE')
                                         <button type="button" class="btn btn-warning btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-delegar-{{ $caja->id }}">
                                             <i class="bi bi-send me-1"></i> Delegar
                                         </button>
@@ -185,62 +196,63 @@
                     </div>
                     <form action="{{ route('cajas.egreso', $caja) }}" method="POST" enctype="multipart/form-data">
                         @csrf
-                        <div class="modal-body px-4 py-4">
-                            <div class="row g-4">
+                        <div class="modal-body px-4 py-4" style="position:relative;min-height:380px;">
+
+                            {{-- Overlay de búsqueda externa --}}
+                            <div id="search-overlay-{{ $caja->id }}" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#fff;z-index:10;padding:1.5rem;overflow-y:auto;border-radius:0.375rem;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="cerrarBusqueda('{{ $caja->id }}')">
+                                    <i class="bi bi-arrow-left me-1"></i> Volver a datos de cirugía
+                                </button>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-3">
+                                        <label class="form-label form-label-bio small">Fecha Desde</label>
+                                        <input type="date" id="bfecha_desde-{{ $caja->id }}" class="form-control form-control-bio">
+                                    </div>
+                                    <div class="col-3">
+                                        <label class="form-label form-label-bio small">Fecha Hasta</label>
+                                        <input type="date" id="bfecha_hasta-{{ $caja->id }}" class="form-control form-control-bio">
+                                    </div>
+                                    <div class="col-3">
+                                        <label class="form-label form-label-bio small">Paciente</label>
+                                        <input type="text" id="bpaciente-{{ $caja->id }}" class="form-control form-control-bio" placeholder="Nombre">
+                                    </div>
+                                    <div class="col-3">
+                                        <label class="form-label form-label-bio small">Médico</label>
+                                        <input type="text" id="bmedico-{{ $caja->id }}" class="form-control form-control-bio" placeholder="Dr.">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-primary btn-bio mb-3" onclick="buscarProcedimientos('{{ $caja->id }}')">
+                                    <i class="bi bi-search me-1"></i> Buscar
+                                </button>
+                                <div id="resultados-{{ $caja->id }}" style="display:none;">
+                                    <div class="table-responsive" style="max-height:400px;overflow-y:auto;">
+                                        <table class="table table-bio mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>PlcCod</th>
+                                                    <th>Fecha</th>
+                                                    <th>Paciente</th>
+                                                    <th>Médico</th>
+                                                    <th>Hospital</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tabla-resultados-{{ $caja->id }}"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="form-content-{{ $caja->id }}">
+                                <div class="row g-4">
                                 <div class="col-md-6">
                                     <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-person me-1" style="color:#3b82f6;"></i> Datos de la Cirugía</h6>
 
                                     {{-- Buscador en API externa --}}
                                     <div class="mb-3">
-                                        <button type="button" class="btn btn-outline-info btn-bio btn-sm w-100" onclick="toggleBuscar('{{ $caja->id }}')">
+                                        <button type="button" class="btn btn-outline-info btn-bio btn-sm w-100" onclick="abrirBusqueda('{{ $caja->id }}')">
                                             <i class="bi bi-search me-1"></i> Buscar en sistema externo
                                         </button>
-                                    </div>
-
-                                    <div id="panel-buscar-{{ $caja->id }}" style="display:none;" class="mb-3 p-3 rounded-3 bg-light border">
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <label class="form-label form-label-bio small">Fecha Desde</label>
-                                                <input type="date" id="bfecha_desde-{{ $caja->id }}" class="form-control form-control-bio form-control-sm">
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label form-label-bio small">Fecha Hasta</label>
-                                                <input type="date" id="bfecha_hasta-{{ $caja->id }}" class="form-control form-control-bio form-control-sm">
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label form-label-bio small">Paciente</label>
-                                                <input type="text" id="bpaciente-{{ $caja->id }}" class="form-control form-control-bio form-control-sm" placeholder="Nombre">
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label form-label-bio small">Médico</label>
-                                                <input type="text" id="bmedico-{{ $caja->id }}" class="form-control form-control-bio form-control-sm" placeholder="Dr.">
-                                            </div>
-                                            <div class="col-12 mt-2">
-                                                <button type="button" class="btn btn-primary btn-bio btn-sm w-100" onclick="buscarProcedimientos('{{ $caja->id }}')">
-                                                    <i class="bi bi-search me-1"></i> Buscar
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {{-- Resultados de búsqueda --}}
-                                        <div id="resultados-{{ $caja->id }}" class="mt-3" style="display:none;">
-                                            <hr class="my-2">
-                                            <div class="table-responsive" style="max-height:200px;overflow-y:auto;">
-                                                <table class="table table-sm table-bio mb-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>PlcCod</th>
-                                                            <th>Fecha</th>
-                                                            <th>Paciente</th>
-                                                            <th>Médico</th>
-                                                            <th>Hospital</th>
-                                                            <th></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="tabla-resultados-{{ $caja->id }}"></tbody>
-                                                </table>
-                                            </div>
-                                        </div>
                                     </div>
 
                                     {{-- Badge de CX seleccionada --}}
@@ -268,7 +280,7 @@
                                     <div id="tecnico-registrado-{{ $caja->id }}">
                                         <div class="mb-3">
                                             <label class="form-label form-label-bio">Técnico</label>
-                                            <select name="tecnico_id" class="form-select form-control-bio">
+                                            <select name="tecnico_id" class="form-select form-control-bio" required>
                                                 <option value="">Seleccionar...</option>
                                                 @foreach($tecnicos as $tecnico)
                                                     <option value="{{ $tecnico->id }}">{{ $tecnico->name }}</option>
@@ -294,8 +306,8 @@
                                         </div>
                                     </div>
                                     <div class="mt-3">
-                                        <label class="form-label form-label-bio">ID Bioimplant <span class="text-muted fw-normal">(opcional)</span></label>
-                                        <input type="text" name="bioimplant_id" class="form-control form-control-bio" placeholder="Número de proyecto">
+                                        <label class="form-label form-label-bio">Observaciones</label>
+                                        <textarea name="observaciones" rows="3" class="form-control form-control-bio" placeholder="Notas para el técnico u otros grupos..."></textarea>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -329,6 +341,7 @@
                                     @endif
                                 </div>
                             </div>
+                            </div>
                         </div>
                         <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
                             <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
@@ -341,6 +354,95 @@
             </div>
         </div>
     @endforeach
+
+    {{-- Modal Egreso por Grupo --}}
+    <div class="modal fade" id="modal-egreso-grupo" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-boxes me-2" style="color:#3b82f6;"></i>Egreso por Grupo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="form-egreso-grupo" action="" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-body px-4 py-4">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-boxes me-1" style="color:#3b82f6;"></i> Grupo</h6>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Seleccionar Grupo</label>
+                                    <select name="grupo_id" id="select-grupo" class="form-select form-control-bio" required onchange="cargarCajasGrupo()">
+                                        <option value="">Seleccionar...</option>
+                                        @foreach($grupos as $grupo)
+                                            <option value="{{ $grupo->id }}" data-cajas='@json($grupo->cajas->pluck('id'))'>{{ $grupo->nombre }} ({{ $grupo->cajas->count() }} cajas)</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div id="info-grupo" style="display:none;">
+                                    <div class="mb-3">
+                                        <label class="form-label form-label-bio">Cajas del Grupo</label>
+                                        <div id="lista-cajas-grupo" class="table-responsive" style="max-height:250px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:12px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-person me-1" style="color:#3b82f6;"></i> Datos de la Cirugía</h6>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Paciente</label>
+                                    <input type="text" name="paciente" id="input-paciente-grupo" required class="form-control form-control-bio" placeholder="Nombre completo">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Médico</label>
+                                    <input type="text" name="medico" id="input-medico-grupo" required class="form-control form-control-bio" placeholder="Dr. / Dra.">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Tipo de Técnico</label>
+                                    <div class="d-flex gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="tipo_tecnico_grupo" value="registrado" id="tipo-reg-grupo" checked onchange="toggleTecnicoGrupo()">
+                                            <label class="form-check-label small" for="tipo-reg-grupo">Registrado</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="tipo_tecnico_grupo" value="externo" id="tipo-ext-grupo" onchange="toggleTecnicoGrupo()">
+                                            <label class="form-check-label small" for="tipo-ext-grupo">Externo (sin login)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="tecnico-registrado-grupo">
+                                    <div class="mb-3">
+                                        <label class="form-label form-label-bio">Técnico</label>
+                                        <select name="tecnico_id" class="form-select form-control-bio" required>
+                                            <option value="">Seleccionar...</option>
+                                            @foreach($tecnicos as $tecnico)
+                                                <option value="{{ $tecnico->id }}">{{ $tecnico->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="tecnico-externo-grupo" style="display:none;">
+                                    <div class="mb-3">
+                                        <label class="form-label form-label-bio">Nombre del Externo</label>
+                                        <input type="text" name="tecnico_nombre" class="form-control form-control-bio" placeholder="Nombre completo del técnico externo">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label form-label-bio">Observaciones</label>
+                                    <textarea name="observaciones" rows="3" class="form-control form-control-bio" placeholder="Notas para el técnico u otros grupos..."></textarea>
+                                </div>
+                                <input type="hidden" name="plc_cod" id="plc_cod-grupo" value="">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
+                        <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary btn-bio px-4" id="btn-egreso-grupo" disabled>
+                            <i class="bi bi-check-lg me-1"></i> Confirmar Egreso del Grupo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     {{-- Modal Reparar --}}
     @foreach($cajas->whereIn('estado', ['DISPONIBLE', 'EN ESTERILIZADORA', 'EN CX', 'PENDIENTE']) as $caja)
@@ -425,7 +527,7 @@
         </div>
     @endforeach
 
-    @foreach($cajas->whereIn('estado', ['EN TRANSITO', 'PENDIENTE']) as $caja)
+    @foreach($cajas->where('estado', 'PENDIENTE') as $caja)
         <div class="modal fade" id="modal-delegar-{{ $caja->id }}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -442,7 +544,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label form-label-bio">Acción a delegar</label>
-                                @if($caja->estado === 'EN TRANSITO')
+                                @if($caja->estado === 'EN TRANSITO VUELTA')
                                     <input type="hidden" name="accion" value="consumo.controlar">
                                     <div class="alert alert-info py-2 px-3 small mb-0">
                                         <i class="bi bi-arrow-down-circle me-1"></i> Recibir caja e iniciar control
@@ -455,7 +557,7 @@
                                     </select>
                                 @endif
                             </div>
-                            @if($caja->estado !== 'EN TRANSITO')
+                            @if($caja->estado !== 'EN TRANSITO VUELTA')
                                 <input type="hidden" name="resultado" id="resultado-delegar-{{ $caja->id }}" value="">
                             @endif
                         </div>
@@ -617,9 +719,19 @@
     @endforeach
 
     <script>
-        function toggleBuscar(id) {
-            const panel = document.getElementById('panel-buscar-' + id);
-            panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        function abrirBusqueda(id) {
+            document.getElementById('form-content-' + id).style.display = 'none';
+            document.getElementById('search-overlay-' + id).style.display = '';
+            document.getElementById('bfecha_desde-' + id).value = '';
+            document.getElementById('bfecha_hasta-' + id).value = '';
+            document.getElementById('bpaciente-' + id).value = '';
+            document.getElementById('bmedico-' + id).value = '';
+            document.getElementById('resultados-' + id).style.display = 'none';
+        }
+
+        function cerrarBusqueda(id) {
+            document.getElementById('form-content-' + id).style.display = '';
+            document.getElementById('search-overlay-' + id).style.display = 'none';
         }
 
         function buscarProcedimientos(id) {
@@ -673,8 +785,7 @@
             document.getElementById('codigo-cx-' + id).textContent = '#' + plcCod;
             badge.classList.remove('d-none');
 
-            var panel = document.getElementById('panel-buscar-' + id);
-            panel.style.display = 'none';
+            cerrarBusqueda(id);
         }
 
         function copiarLink(url) {
@@ -698,6 +809,65 @@
             const input = ext.querySelector('input');
             if (select) select.required = !esExterno;
             if (input) input.required = esExterno;
+        }
+
+        function toggleTecnicoGrupo() {
+            const reg = document.getElementById('tecnico-registrado-grupo');
+            const ext = document.getElementById('tecnico-externo-grupo');
+            const esExterno = document.getElementById('tipo-ext-grupo').checked;
+            reg.style.display = esExterno ? 'none' : '';
+            ext.style.display = esExterno ? '' : 'none';
+            const select = reg.querySelector('select');
+            const input = ext.querySelector('input');
+            if (select) select.required = !esExterno;
+            if (input) input.required = esExterno;
+        }
+
+        function cargarCajasGrupo() {
+            const select = document.getElementById('select-grupo');
+            const grupoId = select.value;
+            const contenedor = document.getElementById('lista-cajas-grupo');
+            const infoDiv = document.getElementById('info-grupo');
+            const btn = document.getElementById('btn-egreso-grupo');
+            const form = document.getElementById('form-egreso-grupo');
+
+            if (!grupoId) {
+                infoDiv.style.display = 'none';
+                btn.disabled = true;
+                return;
+            }
+
+            form.action = '{{ url("grupos") }}/' + grupoId + '/egreso';
+
+            const option = select.options[select.selectedIndex];
+            let cajas = [];
+            try {
+                cajas = JSON.parse(option.getAttribute('data-cajas') || '[]');
+            } catch(e) { cajas = []; }
+
+            infoDiv.style.display = '';
+
+            const cajasData = @json($cajasDisponibles->keyBy('id'));
+            const allCajas = @json($cajas->keyBy('id'));
+
+            let html = '<table class="table table-sm table-bio mb-0"><thead><tr><th>Nombre</th><th>Código</th><th>Estado</th></tr></thead><tbody>';
+            let allAvailable = true;
+
+            cajas.forEach(function(cajaId) {
+                const caja = allCajas[cajaId];
+                if (!caja) return;
+                const disponible = caja.estado === 'DISPONIBLE';
+                if (!disponible) allAvailable = false;
+                const badgeClass = disponible ? 'badge-success' : 'badge-secondary';
+                const estadoHtml = disponible
+                    ? '<span class="badge badge-estado badge-success">DISPONIBLE</span>'
+                    : '<span class="badge badge-estado badge-secondary">' + caja.estado + ' — se omitirá</span>';
+                html += '<tr class="' + (disponible ? '' : 'text-muted') + '"><td><small>' + caja.nombre + '</small></td><td><code>' + caja.codigo_interno + '</code></td><td>' + estadoHtml + '</td></tr>';
+            });
+
+            html += '</tbody></table>';
+            contenedor.innerHTML = html;
+            btn.disabled = false;
         }
 
         function toggleReasignar(id) {

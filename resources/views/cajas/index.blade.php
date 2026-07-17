@@ -31,8 +31,9 @@
                                         $estilos = [
                                             'DISPONIBLE' => 'badge-success',
                                             'EN ESTERILIZADORA' => 'badge-primary',
-                                            'EN CX' => 'badge-dark',
-                                            'EN TRANSITO' => 'badge-warning',
+            'EN CX' => 'badge-dark',
+            'CX FINALIZADA' => 'badge-dark',
+            'EN TRANSITO VUELTA' => 'badge-warning',
                                             'PENDIENTE' => 'badge-warning',
                                             'ACONDICIONAMIENTO' => 'badge-info',
                                             'EN REPARACION' => 'badge-danger',

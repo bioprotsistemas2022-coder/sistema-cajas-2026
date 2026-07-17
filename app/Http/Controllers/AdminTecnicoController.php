@@ -9,7 +9,7 @@ class AdminTecnicoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::where('role', 'tecnico');
+        $query = User::whereIn('role', ['tecnico', 'logistica']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -29,16 +29,18 @@ class AdminTecnicoController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:8|confirmed',
+            'role' => 'required|in:tecnico,logistica',
         ]);
 
         User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => $request->password,
-            'role' => 'tecnico',
+            'role' => $request->role,
         ]);
 
-        return back()->with('success', 'Técnico creado correctamente.');
+        $label = $request->role === 'logistica' ? 'Usuario de logística' : 'Técnico';
+        return back()->with('success', "{$label} creado correctamente.");
     }
 
     public function update(Request $request, User $tecnico)
