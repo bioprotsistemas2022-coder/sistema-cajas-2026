@@ -39,7 +39,7 @@
                                                 @foreach($grupo->cajas as $c)
                                                     <small class="d-block" style="color:#94a3b8;font-size:0.7rem;">
                                                         {{ $c->nombre }} <code>{{ $c->codigo_interno }}</code>
-                                                        <span class="badge badge-estado badge-{{ $c->estado == 'DISPONIBLE' ? 'success' : 'secondary' }}" style="font-size:0.6rem;">{{ $c->estado }}</span>
+                                                        <span class="badge badge-estado badge-{{ $c->estado == 'CONSIGNADA' ? 'info' : ($c->estado == 'DISPONIBLE' ? 'success' : 'secondary') }}" style="font-size:0.6rem;">{{ $c->estadoLabel() }}</span>
                                                     </small>
                                                 @endforeach
                                             </div>
@@ -95,7 +95,7 @@
                                                                             </td>
                                                                             <td><small>{{ $caja->nombre }}</small></td>
                                                                             <td><code>{{ $caja->codigo_interno }}</code></td>
-                                                                            <td><span class="badge badge-estado badge-success">DISPONIBLE</span></td>
+                                                                            <td><span class="badge badge-estado badge-{{ $caja->estado == 'CONSIGNADA' ? 'info' : ($caja->estado == 'DISPONIBLE' ? 'success' : 'secondary') }}">{{ $caja->estadoLabel() }}</span></td>
                                                                         </tr>
                                                                     @endforeach
                                                                 </tbody>
@@ -185,7 +185,7 @@
                                                 </td>
                                                 <td><small>{{ $caja->nombre }}</small></td>
                                                 <td><code>{{ $caja->codigo_interno }}</code></td>
-                                                <td><span class="badge badge-estado badge-success">DISPONIBLE</span></td>
+                                                <td><span class="badge badge-estado badge-{{ $caja->estado == 'CONSIGNADA' ? 'info' : ($caja->estado == 'DISPONIBLE' ? 'success' : 'secondary') }}">{{ $caja->estadoLabel() }}</span></td>
                                             </tr>
                                         @endforeach
                                     </tbody>

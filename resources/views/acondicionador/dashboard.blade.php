@@ -49,7 +49,7 @@
                             <div class="fw-semibold" style="color:#0f172a;">{{ $caja->nombre }}</div>
                             <div class="d-flex align-items-center gap-2 mt-1">
                                 <small class="text-uppercase" style="color:#94a3b8;letter-spacing:0.05em;">{{ $caja->codigo_interno }}</small>
-                                <span class="badge badge-estado badge-info px-2">{{ $caja->estado }}</span>
+                                <span class="badge badge-estado badge-info px-2">{{ $caja->estadoLabel() }}</span>
                             </div>
                         </div>
                     </div>

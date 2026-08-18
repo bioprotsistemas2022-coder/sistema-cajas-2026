@@ -34,7 +34,7 @@ class BoxStateService
         $current = $caja->estado;
 
         $allowed = [
-            'DISPONIBLE' => ['EN ESTERILIZADORA', 'EN REPARACION', 'BAJA'],
+            'DISPONIBLE' => ['EN ESTERILIZADORA', 'EN REPARACION', 'BAJA', 'CONSIGNADA'],
             'EN ESTERILIZADORA' => ['EN CX', 'DISPONIBLE', 'EN REPARACION'],
             'EN CX' => ['CX FINALIZADA', 'EN REPARACION', 'DISPONIBLE'],
             'CX FINALIZADA' => ['EN TRANSITO VUELTA', 'EN REPARACION', 'DISPONIBLE'],
@@ -42,6 +42,7 @@ class BoxStateService
             'PENDIENTE' => ['ACONDICIONAMIENTO', 'EN REPARACION'],
             'ACONDICIONAMIENTO' => ['DISPONIBLE'],
             'EN REPARACION' => ['DISPONIBLE', 'BAJA'],
+            'CONSIGNADA' => ['EN ESTERILIZADORA', 'DISPONIBLE', 'EN REPARACION', 'BAJA'],
             'BAJA' => []
         ];
 

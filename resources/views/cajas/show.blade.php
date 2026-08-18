@@ -22,13 +22,13 @@
                         <label class="form-label form-label-bio">Estado</label>
                         @php
                             $estilos = [
-                                'DISPONIBLE' => 'badge-success','EN ESTERILIZADORA' => 'badge-primary',
+                                'DISPONIBLE' => 'badge-success','CONSIGNADA' => 'badge-info','EN ESTERILIZADORA' => 'badge-primary',
                                 'EN CX' => 'badge-dark','CX FINALIZADA' => 'badge-dark','EN TRANSITO VUELTA' => 'badge-warning',
                                 'PENDIENTE' => 'badge-warning','ACONDICIONAMIENTO' => 'badge-info',
                                 'EN REPARACION' => 'badge-danger','BAJA' => 'badge-secondary',
                             ];
                         @endphp
-                        <span class="badge badge-estado {{ $estilos[$caja->estado] ?? 'badge-secondary' }}">{{ $caja->estado }}</span>
+                        <span class="badge badge-estado {{ $estilos[$caja->estado] ?? 'badge-secondary' }}">{{ $caja->estadoLabel() }}</span>
                     </div>
                     <div class="mb-4">
                         <label class="form-label form-label-bio">ID</label>
@@ -223,8 +223,8 @@
                                         @endphp
                                         <tr>
                                             <td><small>{{ $evento->created_at->format('d/m/Y H:i') }}</small></td>
-                                            <td><span class="badge badge-estado badge-secondary">{{ $evento->estado_anterior ?? '—' }}</span></td>
-                                            <td><span class="badge badge-estado {{ $estilos[$evento->estado_nuevo] ?? 'badge-secondary' }}">{{ $evento->estado_nuevo }}</span></td>
+                                            <td><span class="badge badge-estado badge-secondary">{{ \App\Models\Caja::estadoLabels()[$evento->estado_anterior] ?? ($evento->estado_anterior ?? '—') }}</span></td>
+                                            <td><span class="badge badge-estado {{ $estilos[$evento->estado_nuevo] ?? 'badge-secondary' }}">{{ \App\Models\Caja::estadoLabels()[$evento->estado_nuevo] ?? $evento->estado_nuevo }}</span></td>
                                             <td><small>{{ $evento->user->name ?? 'Sistema' }}</small></td>
                                             <td><small>{!! $obsHtml ?: '—' !!}</small></td>
                                         </tr>

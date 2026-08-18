@@ -14,7 +14,7 @@
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
                             <div class="stat-value text-success mb-1">{{ $cajas->where('estado', 'DISPONIBLE')->count() }}</div>
-                            <div class="stat-label text-success">Disponibles</div>
+                            <div class="stat-label text-success">Sin Consignar</div>
                         </div>
                     </div>
                     <div class="col-3">
@@ -92,7 +92,8 @@
         <div class="card-header py-3 bg-white" style="border-top:1px solid #e2e8f0;">
             <div class="d-flex gap-2 flex-wrap">
                 <button type="button" class="btn btn-sm btn-primary btn-bio filtro-btn active px-3" data-filtro="todos" onclick="filtrarTabla('todos')">Todos</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="DISPONIBLE" onclick="filtrarTabla('DISPONIBLE')">Disponibles</button>
+                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="DISPONIBLE" onclick="filtrarTabla('DISPONIBLE')">Sin Consignar</button>
+                <button type="button" class="btn btn-sm btn-outline-info btn-bio filtro-btn px-3" data-filtro="CONSIGNADA" onclick="filtrarTabla('CONSIGNADA')">Consignadas</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN ESTERILIZADORA" onclick="filtrarTabla('EN ESTERILIZADORA')">Esterilización</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN CX" onclick="filtrarTabla('EN CX')">Cirugía</button>
                 <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="CX FINALIZADA" onclick="filtrarTabla('CX FINALIZADA')">CX Finalizada</button>
@@ -126,6 +127,7 @@
                                     @php
                                         $estilos = [
                                             'DISPONIBLE' => 'badge-success',
+                                            'CONSIGNADA' => 'badge-info',
                                             'EN ESTERILIZADORA' => 'badge-primary',
             'EN CX' => 'badge-dark',
             'CX FINALIZADA' => 'badge-dark',
@@ -137,14 +139,14 @@
                                         ];
                                     @endphp
                                     <span class="badge badge-estado {{ $estilos[$caja->estado] ?? 'badge-secondary' }}">
-                                        {{ $caja->estado }}
+                                        {{ $caja->estadoLabel() }}
                                     </span>
                                 </td>
                                 <td>
                                     <code class="bg-light px-2 py-1 rounded-3" style="color:#475569;">{{ $caja->codigo_interno }}</code>
                                 </td>
                                 <td class="text-end">
-                                    @if($caja->estado == 'DISPONIBLE')
+                                    @if($caja->estado == 'CONSIGNADA')
                                         <button type="button" class="btn btn-primary btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-egreso-{{ $caja->id }}">
                                             <i class="bi bi-calendar-plus me-1"></i> Asignar
                                         </button>
@@ -186,7 +188,7 @@
         </div>
     </div>
 
-    @foreach($cajas->where('estado', 'DISPONIBLE') as $caja)
+    @foreach($cajas->where('estado', 'CONSIGNADA') as $caja)
         <div class="modal fade" id="modal-egreso-{{ $caja->id }}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-xl">
                 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -856,11 +858,11 @@
             cajas.forEach(function(cajaId) {
                 const caja = allCajas[cajaId];
                 if (!caja) return;
-                const disponible = caja.estado === 'DISPONIBLE';
+                const disponible = caja.estado === 'CONSIGNADA';
                 if (!disponible) allAvailable = false;
-                const badgeClass = disponible ? 'badge-success' : 'badge-secondary';
+                const badgeClass = disponible ? 'badge-info' : 'badge-secondary';
                 const estadoHtml = disponible
-                    ? '<span class="badge badge-estado badge-success">DISPONIBLE</span>'
+                    ? '<span class="badge badge-estado badge-info">CONSIGNADA</span>'
                     : '<span class="badge badge-estado badge-secondary">' + caja.estado + ' — se omitirá</span>';
                 html += '<tr class="' + (disponible ? '' : 'text-muted') + '"><td><small>' + caja.nombre + '</small></td><td><code>' + caja.codigo_interno + '</code></td><td>' + estadoHtml + '</td></tr>';
             });

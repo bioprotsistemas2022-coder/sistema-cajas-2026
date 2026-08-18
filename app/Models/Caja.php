@@ -10,6 +10,8 @@ class Caja extends Model
         'nombre',
         'codigo_interno',
         'estado',
+        'consignatario_nombre',
+        'fecha_consignacion',
         'pdf_path',
         'imagen_salida_path'
     ];
@@ -37,5 +39,60 @@ class Caja extends Model
     public function grupos()
     {
         return $this->belongsToMany(Grupo::class, 'grupo_caja');
+    }
+
+    /**
+     * Etiqueta legible del estado para UI y API.
+     * DISPONIBLE se muestra como "Sin Consignar".
+     */
+    public function estadoLabel(): string
+    {
+        return self::estadoLabels()[$this->estado] ?? $this->estado;
+    }
+
+    /**
+     * Mapa de estados -> etiquetas legibles.
+     */
+    public static function estadoLabels(): array
+    {
+        return [
+            'DISPONIBLE' => 'Sin Consignar',
+            'CONSIGNADA' => 'Consignada',
+            'EN ESTERILIZADORA' => 'En Esterilizadora',
+            'EN CX' => 'En Cirugía',
+            'CX FINALIZADA' => 'CX Finalizada',
+            'EN TRANSITO VUELTA' => 'En Tránsito Vuelta',
+            'PENDIENTE' => 'Pendiente',
+            'ACONDICIONAMIENTO' => 'Acondicionamiento',
+            'EN REPARACION' => 'En Reparación',
+            'BAJA' => 'Baja',
+        ];
+    }
+
+    /**
+     * Clase CSS del badge según el estado.
+     */
+    public function estadoBadgeClass(): string
+    {
+        return [
+            'DISPONIBLE' => 'badge-success',
+            'CONSIGNADA' => 'badge-info',
+            'EN ESTERILIZADORA' => 'badge-primary',
+            'EN CX' => 'badge-dark',
+            'CX FINALIZADA' => 'badge-dark',
+            'EN TRANSITO VUELTA' => 'badge-warning',
+            'PENDIENTE' => 'badge-warning',
+            'ACONDICIONAMIENTO' => 'badge-info',
+            'EN REPARACION' => 'badge-danger',
+            'BAJA' => 'badge-secondary',
+        ][$this->estado] ?? 'badge-secondary';
+    }
+
+    /**
+     * Regla de negocio: solo las cajas CONSIGNADAS pueden asignarse a una CX.
+     */
+    public function puedeIrACX(): bool
+    {
+        return $this->estado === 'CONSIGNADA';
     }
 }

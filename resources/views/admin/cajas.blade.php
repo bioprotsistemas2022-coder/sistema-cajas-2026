@@ -67,13 +67,13 @@
                                 <td>
                                     @php
                                         $estilos = [
-                                            'DISPONIBLE' => 'badge-success','EN ESTERILIZADORA' => 'badge-primary',
+                                            'DISPONIBLE' => 'badge-success','CONSIGNADA' => 'badge-info','EN ESTERILIZADORA' => 'badge-primary',
                                             'EN CX' => 'badge-dark','CX FINALIZADA' => 'badge-dark','EN TRANSITO VUELTA' => 'badge-warning',
                                             'PENDIENTE' => 'badge-warning','ACONDICIONAMIENTO' => 'badge-info',
                                             'EN REPARACION' => 'badge-danger','BAJA' => 'badge-secondary',
                                         ];
                                     @endphp
-                                    <span class="badge badge-estado {{ $estilos[$caja->estado] ?? 'badge-secondary' }}">{{ $caja->estado }}</span>
+                                    <span class="badge badge-estado {{ $estilos[$caja->estado] ?? 'badge-secondary' }}">{{ $caja->estadoLabel() }}</span>
                                 </td>
                                 <td>
                                     @if($caja->pdf_path)

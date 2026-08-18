@@ -25,7 +25,8 @@ class DepositoController extends Controller
             ->get()
             ->keyBy('caja_id');
         $grupos = Grupo::with('cajas')->get();
-        $cajasDisponibles = Caja::where('estado', 'DISPONIBLE')->orderBy('nombre')->get();
+        // Solo las cajas CONSIGNADAS pueden asignarse a una CX
+        $cajasDisponibles = Caja::where('estado', 'CONSIGNADA')->orderBy('nombre')->get();
         return view('deposito.dashboard', compact('cajas', 'tecnicos', 'tokensActivos', 'grupos', 'cajasDisponibles'));
     }
 
@@ -37,6 +38,11 @@ class DepositoController extends Controller
             'plc_cod' => 'nullable|string',
             'observaciones' => 'nullable|string',
         ]);
+
+        // Regla de negocio: solo cajas CONSIGNADAS pueden ir a CX
+        if (! $caja->puedeIrACX()) {
+            return back()->with('error', 'Solo las cajas CONSIGNADAS pueden asignarse a una cirugía. La caja "' . $caja->nombre . '" está "' . $caja->estadoLabel() . '". Primero debe consignarse.');
+        }
 
         if (!BoxStateService::canTransition($caja, 'EN ESTERILIZADORA')) {
             return back()->with('error', 'La caja no puede pasar a Esterilizadora desde su estado actual.');
@@ -247,6 +253,13 @@ class DepositoController extends Controller
         $omitidasNombres = [];
 
         foreach ($grupo->cajas as $caja) {
+            // Regla de negocio: solo cajas CONSIGNADAS pueden ir a CX
+            if (! $caja->puedeIrACX()) {
+                $omitidas++;
+                $omitidasNombres[] = $caja->nombre . ' (' . $caja->codigo_interno . ') — no consignada';
+                continue;
+            }
+
             if (!BoxStateService::canTransition($caja, 'EN ESTERILIZADORA')) {
                 $omitidas++;
                 $omitidasNombres[] = $caja->nombre . ' (' . $caja->codigo_interno . ')';

@@ -30,6 +30,7 @@
                                     @php
                                         $estilos = [
                                             'DISPONIBLE' => 'badge-success',
+                                            'CONSIGNADA' => 'badge-info',
                                             'EN ESTERILIZADORA' => 'badge-primary',
             'EN CX' => 'badge-dark',
             'CX FINALIZADA' => 'badge-dark',
@@ -41,7 +42,7 @@
                                         ];
                                     @endphp
                                     <span class="badge badge-estado {{ $estilos[$caja->estado] ?? 'badge-secondary' }}">
-                                        {{ $caja->estado }}
+                                        {{ $caja->estadoLabel() }}
                                     </span>
                                 </td>
                                 <td>
