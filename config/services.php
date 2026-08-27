@@ -33,6 +33,11 @@ return [
         'token' => env('API_PROCEDURE_TOKEN'),
     ],
 
+    'consignaciones' => [
+        'poll_url' => env('CONSIGNACIONES_POLL_URL', 'http://localhost/consignaciones/includes/api_cx_poll.php'),
+        'enabled' => env('CONSIGNACIONES_POLL_ENABLED', false),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

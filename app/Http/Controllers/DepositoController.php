@@ -16,18 +16,38 @@ use Illuminate\Support\Facades\Storage;
 
 class DepositoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $cajas = Caja::with('imagenes')->get();
+        $estado = $request->query('estado');
+        $q = trim((string) $request->query('q', ''));
+
+        $query = Caja::with('imagenes');
+
+        $estadosValidos = ['DISPONIBLE','CONSIGNADA','PENDIENTE_DESPACHO','EN ESTERILIZADORA','EN CX','CX FINALIZADA','EN TRANSITO VUELTA','PENDIENTE','ACONDICIONAMIENTO','EN REPARACION','BAJA'];
+        if ($estado && $estado !== 'todos' && in_array($estado, $estadosValidos, true)) {
+            $query->where('estado', $estado);
+        }
+        if ($q !== '') {
+            $query->where(function ($qq) use ($q) {
+                $qq->where('nombre', 'like', "%{$q}%")
+                   ->orWhere('codigo_interno', 'like', "%{$q}%");
+            });
+        }
+
+        $cajas = $query->orderBy('nombre')->paginate(20)->withQueryString();
+
+        $stats = Caja::selectRaw('estado, COUNT(*) as total')
+            ->groupBy('estado')
+            ->pluck('total', 'estado');
+
         $tecnicos = User::where('role', 'tecnico')->get();
         $tokensActivos = TokensAccion::whereNull('used_at')
             ->where('expires_at', '>', now())
             ->get()
             ->keyBy('caja_id');
         $grupos = Grupo::with('cajas')->get();
-        // Solo las cajas CONSIGNADAS pueden asignarse a una CX
         $cajasDisponibles = Caja::where('estado', 'CONSIGNADA')->orderBy('nombre')->get();
-        return view('deposito.dashboard', compact('cajas', 'tecnicos', 'tokensActivos', 'grupos', 'cajasDisponibles'));
+        return view('deposito.dashboard', compact('cajas', 'stats', 'tecnicos', 'tokensActivos', 'grupos', 'cajasDisponibles'));
     }
 
     public function egreso(Request $request, Caja $caja)
@@ -39,13 +59,13 @@ class DepositoController extends Controller
             'observaciones' => 'nullable|string',
         ]);
 
-        // Regla de negocio: solo cajas CONSIGNADAS pueden ir a CX
-        if (! $caja->puedeIrACX()) {
-            return back()->with('error', 'Solo las cajas CONSIGNADAS pueden asignarse a una cirugía. La caja "' . $caja->nombre . '" está "' . $caja->estadoLabel() . '". Primero debe consignarse.');
+        if (! $caja->puedeIrACX() && $caja->estado !== 'PENDIENTE_DESPACHO') {
+            return back()->with('error', 'Solo cajas CONSIGNADAS o en Pend. Despacho pueden asignarse. La caja "' . $caja->nombre . '" está "' . $caja->estadoLabel() . '".');
         }
 
-        if (!BoxStateService::canTransition($caja, 'EN ESTERILIZADORA')) {
-            return back()->with('error', 'La caja no puede pasar a Esterilizadora desde su estado actual.');
+        $targetEstado = $caja->estado === 'PENDIENTE_DESPACHO' ? 'EN ESTERILIZADORA' : 'PENDIENTE_DESPACHO';
+        if (!BoxStateService::canTransition($caja, $targetEstado)) {
+            return back()->with('error', 'La caja no puede pasar a ' . $targetEstado . ' desde su estado actual.');
         }
 
         $cirugiaData = [
@@ -95,9 +115,17 @@ class DepositoController extends Controller
         if ($request->plc_cod) {
             $obs .= " [PlcCod:{$request->plc_cod}]";
         }
-        BoxStateService::transition($caja, 'EN ESTERILIZADORA', auth()->id(), [
-            'observaciones' => $obs,
-        ]);
+        if ($caja->estado === 'CONSIGNADA') {
+            BoxStateService::transition($caja, 'PENDIENTE_DESPACHO', auth()->id(), [
+                'observaciones' => $obs . ' -> Pend. Despacho',
+            ]);
+            $caja->refresh();
+        }
+        if ($caja->estado === 'PENDIENTE_DESPACHO') {
+            BoxStateService::transition($caja, 'EN ESTERILIZADORA', auth()->id(), [
+                'observaciones' => $obs,
+            ]);
+        }
 
         $successMsg = 'Caja enviada a Esterilizadora correctamente.';
         if ($request->tipo_tecnico === 'externo') {
@@ -206,6 +234,20 @@ class DepositoController extends Controller
         return back()->with('success', 'Caja dada de baja.');
     }
 
+    public function aEsterilizadora(Caja $caja)
+    {
+        if ($caja->estado !== 'PENDIENTE_DESPACHO') {
+            return back()->with('error', 'Solo cajas en Pend. Despacho pueden pasar a Esterilizadora. Estado actual: ' . $caja->estadoLabel());
+        }
+        if (!BoxStateService::canTransition($caja, 'EN ESTERILIZADORA')) {
+            return back()->with('error', 'Transición no permitida.');
+        }
+        BoxStateService::transition($caja, 'EN ESTERILIZADORA', auth()->id(), [
+            'observaciones' => 'Pend. Despacho → En Esterilizadora',
+        ]);
+        return back()->with('success', "{$caja->nombre} enviada a Esterilizadora.");
+    }
+
     public function disponibilizar(Caja $caja)
     {
         if (!BoxStateService::canTransition($caja, 'DISPONIBLE')) {
@@ -253,14 +295,14 @@ class DepositoController extends Controller
         $omitidasNombres = [];
 
         foreach ($grupo->cajas as $caja) {
-            // Regla de negocio: solo cajas CONSIGNADAS pueden ir a CX
-            if (! $caja->puedeIrACX()) {
+            if (! $caja->puedeIrACX() && $caja->estado !== 'PENDIENTE_DESPACHO') {
                 $omitidas++;
                 $omitidasNombres[] = $caja->nombre . ' (' . $caja->codigo_interno . ') — no consignada';
                 continue;
             }
 
-            if (!BoxStateService::canTransition($caja, 'EN ESTERILIZADORA')) {
+            $target = $caja->estado === 'PENDIENTE_DESPACHO' ? 'EN ESTERILIZADORA' : 'PENDIENTE_DESPACHO';
+            if (!BoxStateService::canTransition($caja, $target)) {
                 $omitidas++;
                 $omitidasNombres[] = $caja->nombre . ' (' . $caja->codigo_interno . ')';
                 continue;
@@ -272,9 +314,13 @@ class DepositoController extends Controller
             if ($request->plc_cod) {
                 $obs .= " [PlcCod:{$request->plc_cod}]";
             }
-            BoxStateService::transition($caja, 'EN ESTERILIZADORA', auth()->id(), [
-                'observaciones' => $obs,
-            ]);
+            if ($caja->estado === 'CONSIGNADA') {
+                BoxStateService::transition($caja, 'PENDIENTE_DESPACHO', auth()->id(), ['observaciones' => $obs . ' -> Pend. Despacho']);
+                $caja->refresh();
+            }
+            if ($caja->estado === 'PENDIENTE_DESPACHO') {
+                BoxStateService::transition($caja, 'EN ESTERILIZADORA', auth()->id(), ['observaciones' => $obs]);
+            }
 
             $asignadas++;
         }

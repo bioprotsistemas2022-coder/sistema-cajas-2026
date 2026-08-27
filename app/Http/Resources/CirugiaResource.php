@@ -27,6 +27,8 @@ class CirugiaResource extends JsonResource
             'tecnico_nombre' => $this->tecnico_nombre,
             'tecnico_original_id' => $this->tecnico_original_id,
             'observaciones' => $this->observaciones,
+            'external_nco_cod' => $this->external_nco_cod,
+            'external_implantes' => $this->external_implantes,
             'status' => $this->status,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

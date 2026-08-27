@@ -13,55 +13,61 @@
                 <div class="row g-3">
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
-                            <div class="stat-value text-success mb-1">{{ $cajas->where('estado', 'DISPONIBLE')->count() }}</div>
+                            <div class="stat-value text-success mb-1">{{ $stats['DISPONIBLE'] ?? 0 }}</div>
                             <div class="stat-label text-success">Sin Consignar</div>
                         </div>
                     </div>
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
-                            <div class="stat-value text-primary mb-1">{{ $cajas->where('estado', 'EN ESTERILIZADORA')->count() }}</div>
+                            <div class="stat-value text-primary mb-1">{{ $stats['EN ESTERILIZADORA'] ?? 0 }}</div>
                             <div class="stat-label text-primary">Esterilización</div>
                         </div>
                     </div>
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
-                            <div class="stat-value mb-1" style="color:#7c3aed;">{{ $cajas->where('estado', 'EN CX')->count() }}</div>
+                            <div class="stat-value mb-1" style="color:#7c3aed;">{{ $stats['EN CX'] ?? 0 }}</div>
                             <div class="stat-label" style="color:#7c3aed;">En Cirugía</div>
                         </div>
                     </div>
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
-                            <div class="stat-value mb-1" style="color:#5b21b6;">{{ $cajas->where('estado', 'CX FINALIZADA')->count() }}</div>
+                            <div class="stat-value mb-1" style="color:#5b21b6;">{{ $stats['CX FINALIZADA'] ?? 0 }}</div>
                             <div class="stat-label" style="color:#5b21b6;">CX Finalizada</div>
                         </div>
                     </div>
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
-                            <div class="stat-value text-warning mb-1">{{ $cajas->where('estado', 'EN TRANSITO VUELTA')->count() }}</div>
+                            <div class="stat-value text-warning mb-1">{{ $stats['PENDIENTE_DESPACHO'] ?? 0 }}</div>
+                            <div class="stat-label text-warning">Pend. Despacho</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
+                            <div class="stat-value text-warning mb-1">{{ $stats['EN TRANSITO VUELTA'] ?? 0 }}</div>
                             <div class="stat-label text-warning">Tránsito Vuelta</div>
                         </div>
                     </div>
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#fdf2f8,#fce7f3);">
-                            <div class="stat-value mb-1" style="color:#db2777;">{{ $cajas->where('estado', 'PENDIENTE')->count() }}</div>
+                            <div class="stat-value mb-1" style="color:#db2777;">{{ $stats['PENDIENTE'] ?? 0 }}</div>
                             <div class="stat-label" style="color:#db2777;">Auditando</div>
                         </div>
                     </div>
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#ecfeff,#cffafe);">
-                            <div class="stat-value text-info mb-1">{{ $cajas->where('estado', 'ACONDICIONAMIENTO')->count() }}</div>
+                            <div class="stat-value text-info mb-1">{{ $stats['ACONDICIONAMIENTO'] ?? 0 }}</div>
                             <div class="stat-label text-info">Lavado</div>
                         </div>
                     </div>
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#fef2f2,#fee2e2);">
-                            <div class="stat-value text-danger mb-1">{{ $cajas->where('estado', 'EN REPARACION')->count() }}</div>
+                            <div class="stat-value text-danger mb-1">{{ $stats['EN REPARACION'] ?? 0 }}</div>
                             <div class="stat-label text-danger">Reparación</div>
                         </div>
                     </div>
                     <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#f8fafc,#e2e8f0);">
-                            <div class="stat-value mb-1" style="color:#64748b;">{{ $cajas->where('estado', 'BAJA')->count() }}</div>
+                            <div class="stat-value mb-1" style="color:#64748b;">{{ $stats['BAJA'] ?? 0 }}</div>
                             <div class="stat-label" style="color:#64748b;">Baja</div>
                         </div>
                     </div>
@@ -74,34 +80,31 @@
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-3">
             <h5 class="mb-0"><i class="bi bi-box-seam me-2" style="color:#3b82f6;"></i>Listado de Cajas</h5>
             <div class="d-flex align-items-center gap-3">
-                <span id="contador" class="badge" style="background:linear-gradient(135deg,#f1f5f9,#e2e8f0);color:#64748b;font-weight:700;padding:0.5em 1em;border-radius:50rem;">
-                    {{ $cajas->count() }} Cajas
+                <span class="badge" style="background:linear-gradient(135deg,#f1f5f9,#e2e8f0);color:#64748b;font-weight:700;padding:0.5em 1em;border-radius:50rem;">
+                    {{ $cajas->total() }} Cajas @if(request('q') || request('estado'))<small class="fw-normal">(filtradas)</small>@endif
                 </span>
-                <div class="input-group" style="width:280px;">
+                <form method="GET" action="{{ route(request()->routeIs('admin.dashboard') ? 'admin.dashboard' : 'deposito.dashboard') }}" class="input-group" style="width:280px;">
+                    @if(request('estado'))<input type="hidden" name="estado" value="{{ request('estado') }}">@endif
                     <span class="input-group-text border-0 bg-light">
                         <i class="bi bi-search" style="color:#94a3b8;"></i>
                     </span>
-                    <input type="text" id="buscador" class="form-control border-0 bg-light" placeholder="Buscar nombre o código...">
-                </div>
+                    <input type="text" name="q" value="{{ request('q') }}" class="form-control border-0 bg-light" placeholder="Buscar nombre o código...">
+                </form>
                 <button type="button" class="btn btn-info btn-bio" data-bs-toggle="modal" data-bs-target="#modal-egreso-grupo">
                     <i class="bi bi-boxes me-1"></i> Egreso por Grupo
                 </button>
             </div>
         </div>
 
+        @php $filtroActual = request('estado', 'todos'); @endphp
         <div class="card-header py-3 bg-white" style="border-top:1px solid #e2e8f0;">
             <div class="d-flex gap-2 flex-wrap">
-                <button type="button" class="btn btn-sm btn-primary btn-bio filtro-btn active px-3" data-filtro="todos" onclick="filtrarTabla('todos')">Todos</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="DISPONIBLE" onclick="filtrarTabla('DISPONIBLE')">Sin Consignar</button>
-                <button type="button" class="btn btn-sm btn-outline-info btn-bio filtro-btn px-3" data-filtro="CONSIGNADA" onclick="filtrarTabla('CONSIGNADA')">Consignadas</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN ESTERILIZADORA" onclick="filtrarTabla('EN ESTERILIZADORA')">Esterilización</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN CX" onclick="filtrarTabla('EN CX')">Cirugía</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="CX FINALIZADA" onclick="filtrarTabla('CX FINALIZADA')">CX Finalizada</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN TRANSITO VUELTA" onclick="filtrarTabla('EN TRANSITO VUELTA')">Tránsito Vuelta</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="PENDIENTE" onclick="filtrarTabla('PENDIENTE')">Auditoría</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="ACONDICIONAMIENTO" onclick="filtrarTabla('ACONDICIONAMIENTO')">Lavado</button>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-bio filtro-btn px-3" data-filtro="EN REPARACION" onclick="filtrarTabla('EN REPARACION')">Reparación</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary btn-bio filtro-btn px-3" data-filtro="BAJA" onclick="filtrarTabla('BAJA')">Baja</button>
+                @foreach(['todos'=>'Todos','DISPONIBLE'=>'Sin Consignar','CONSIGNADA'=>'Consignadas','PENDIENTE_DESPACHO'=>'Pend. Despacho','EN ESTERILIZADORA'=>'Esterilización','EN CX'=>'Cirugía','CX FINALIZADA'=>'CX Finalizada','EN TRANSITO VUELTA'=>'Tránsito Vuelta','PENDIENTE'=>'Auditoría','ACONDICIONAMIENTO'=>'Lavado','EN REPARACION'=>'Reparación','BAJA'=>'Baja'] as $val=>$label)
+                    <a href="{{ request()->fullUrlWithQuery(['estado'=>$val, 'page'=>null]) }}" class="btn btn-sm btn-bio px-3 {{ $filtroActual===$val ? 'btn-primary active' : 'btn-outline-primary' }}">{{ $label }}</a>
+                @endforeach
+                @if(request('estado') || request('q'))
+                    <a href="{{ route(request()->routeIs('admin.dashboard') ? 'admin.dashboard' : 'deposito.dashboard') }}" class="btn btn-sm btn-outline-secondary btn-bio px-3">Limpiar filtros</a>
+                @endif
             </div>
         </div>
 
@@ -128,6 +131,7 @@
                                         $estilos = [
                                             'DISPONIBLE' => 'badge-success',
                                             'CONSIGNADA' => 'badge-info',
+                                            'PENDIENTE_DESPACHO' => 'badge-warning',
                                             'EN ESTERILIZADORA' => 'badge-primary',
             'EN CX' => 'badge-dark',
             'CX FINALIZADA' => 'badge-dark',
@@ -151,6 +155,11 @@
                                             <i class="bi bi-calendar-plus me-1"></i> Asignar
                                         </button>
                                     @endif
+                                    @if($caja->estado == 'PENDIENTE_DESPACHO')
+                                        <button type="button" class="btn btn-dark btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-a-esterilizadora-{{ $caja->id }}">
+                                            <i class="bi bi-fire me-1"></i> A Esterilizadora
+                                        </button>
+                                    @endif
                                     @if($caja->estado == 'PENDIENTE')
                                         <button type="button" class="btn btn-warning btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-delegar-{{ $caja->id }}">
                                             <i class="bi bi-send me-1"></i> Delegar
@@ -161,7 +170,7 @@
                                             <i class="bi bi-clipboard me-1"></i> Link
                                         </button>
                                     @endif
-                                    @if(in_array($caja->estado, ['DISPONIBLE', 'EN ESTERILIZADORA', 'EN CX', 'PENDIENTE']))
+                                    @if(in_array($caja->estado, ['DISPONIBLE', 'PENDIENTE_DESPACHO', 'EN ESTERILIZADORA', 'EN CX', 'PENDIENTE']))
                                         <button type="button" class="btn btn-warning btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-reparar-{{ $caja->id }}">
                                             <i class="bi bi-tools me-1"></i> Reparar
                                         </button>
@@ -185,10 +194,15 @@
                     </tbody>
                 </table>
             </div>
+            @if($cajas->hasPages())
+                <div class="card-footer bg-white d-flex justify-content-center py-3 border-top">
+                    {{ $cajas->links('pagination::bootstrap-5') }}
+                </div>
+            @endif
         </div>
     </div>
 
-    @foreach($cajas->where('estado', 'CONSIGNADA') as $caja)
+    @foreach($cajas->getCollection()->where('estado', 'CONSIGNADA') as $caja)
         <div class="modal fade" id="modal-egreso-{{ $caja->id }}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-xl">
                 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -357,6 +371,30 @@
         </div>
     @endforeach
 
+    {{-- Modal Pend. Despacho -> Esterilizadora --}}
+    @foreach($cajas->getCollection()->where('estado', 'PENDIENTE_DESPACHO') as $caja)
+        <div class="modal fade" id="modal-a-esterilizadora-{{ $caja->id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg rounded-4">
+                    <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
+                        <h5 class="mb-0 fw-bold" style="color:#92400e;"><i class="bi bi-fire me-2" style="color:#d97706;"></i>A Esterilizadora — {{ $caja->nombre }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ route('cajas.aEsterilizadora', $caja) }}" method="POST">
+                        @csrf
+                        <div class="modal-body px-4 py-4">
+                            <p class="small text-muted mb-0">La caja pasará de <strong>Pend. Despacho</strong> a <strong>EN ESTERILIZADORA</strong>.</p>
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
+                            <button type="button" class="btn btn-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-warning btn-bio"><i class="bi bi-fire me-1"></i> Confirmar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+
     {{-- Modal Egreso por Grupo --}}
     <div class="modal fade" id="modal-egreso-grupo" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -447,7 +485,7 @@
     </div>
 
     {{-- Modal Reparar --}}
-    @foreach($cajas->whereIn('estado', ['DISPONIBLE', 'EN ESTERILIZADORA', 'EN CX', 'PENDIENTE']) as $caja)
+    @foreach($cajas->getCollection()->whereIn('estado', ['DISPONIBLE', 'PENDIENTE_DESPACHO', 'EN ESTERILIZADORA', 'EN CX', 'PENDIENTE']) as $caja)
         <div class="modal fade" id="modal-reparar-{{ $caja->id }}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -475,7 +513,7 @@
     @endforeach
 
     {{-- Modal Volver a Disponible (desde Reparación) --}}
-    @foreach($cajas->where('estado', 'EN REPARACION') as $caja)
+    @foreach($cajas->getCollection()->where('estado', 'EN REPARACION') as $caja)
         <div class="modal fade" id="modal-disponible-{{ $caja->id }}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -499,7 +537,7 @@
     @endforeach
 
     {{-- Modal Baja --}}
-    @foreach($cajas->whereIn('estado', ['DISPONIBLE', 'EN REPARACION']) as $caja)
+    @foreach($cajas->getCollection()->whereIn('estado', ['DISPONIBLE', 'EN REPARACION']) as $caja)
         <div class="modal fade" id="modal-baja-{{ $caja->id }}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -529,7 +567,7 @@
         </div>
     @endforeach
 
-    @foreach($cajas->where('estado', 'PENDIENTE') as $caja)
+    @foreach($cajas->getCollection()->where('estado', 'PENDIENTE') as $caja)
         <div class="modal fade" id="modal-delegar-{{ $caja->id }}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -893,32 +931,7 @@
             }
         });
 
-        let filtroActual = 'todos';
-        function filtrarTabla(filtro) {
-            filtroActual = filtro;
-            document.querySelectorAll('.filtro-btn').forEach(b => { b.classList.remove('active','btn-primary'); b.classList.add('btn-outline-primary'); });
-            document.querySelector(`[data-filtro="${filtro}"]`).classList.add('active','btn-primary');
-            document.querySelector(`[data-filtro="${filtro}"]`).classList.remove('btn-outline-primary');
-            let count = 0;
-            document.querySelectorAll('#tabla-cajas tbody tr').forEach(f => {
-                const ok = filtro === 'todos' || f.getAttribute('data-estado') === filtro;
-                f.style.display = ok ? '' : 'none';
-                if (ok) count++;
-            });
-            document.getElementById('contador').textContent = count + ' Cajas';
-        }
-        document.getElementById('buscador').addEventListener('input', function() {
-            const t = this.value.toLowerCase();
-            let count = 0;
-            document.querySelectorAll('#tabla-cajas tbody tr').forEach(f => {
-                if (filtroActual !== 'todos' && f.getAttribute('data-estado') !== filtroActual) { f.style.display = 'none'; return; }
-                const n = f.querySelector('td:first-child .fw-bold').textContent.toLowerCase();
-                const c = f.querySelector('code').textContent.toLowerCase();
-                const m = n.includes(t) || c.includes(t);
-                f.style.display = m ? '' : 'none';
-                if (m) count++;
-            });
-            document.getElementById('contador').textContent = count + ' Cajas';
-        });
+        // Filtros y búsqueda ahora son server-side (paginación 20)
+        // Se mantienen los links con ?estado= y ?q= ; no se filtra en cliente
     </script>
 </x-app-layout>

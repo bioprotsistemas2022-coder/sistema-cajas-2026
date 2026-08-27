@@ -58,6 +58,7 @@ class Caja extends Model
         return [
             'DISPONIBLE' => 'Sin Consignar',
             'CONSIGNADA' => 'Consignada',
+            'PENDIENTE_DESPACHO' => 'Pend. Despacho',
             'EN ESTERILIZADORA' => 'En Esterilizadora',
             'EN CX' => 'En Cirugía',
             'CX FINALIZADA' => 'CX Finalizada',
@@ -77,6 +78,7 @@ class Caja extends Model
         return [
             'DISPONIBLE' => 'badge-success',
             'CONSIGNADA' => 'badge-info',
+            'PENDIENTE_DESPACHO' => 'badge-warning',
             'EN ESTERILIZADORA' => 'badge-primary',
             'EN CX' => 'badge-dark',
             'CX FINALIZADA' => 'badge-dark',
@@ -94,5 +96,15 @@ class Caja extends Model
     public function puedeIrACX(): bool
     {
         return $this->estado === 'CONSIGNADA';
+    }
+
+    public function puedeIrADespacho(): bool
+    {
+        return $this->estado === 'CONSIGNADA';
+    }
+
+    public function puedeIrAEsterilizadora(): bool
+    {
+        return $this->estado === 'PENDIENTE_DESPACHO';
     }
 }

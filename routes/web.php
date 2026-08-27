@@ -35,6 +35,7 @@ Route::middleware(['auth', 'role:admin,deposito'])->group(function () {
     Route::get('/cajas', [CajaController::class, 'index'])->name('cajas.index');
     Route::get('/cajas/{caja}', [CajaController::class, 'show'])->name('cajas.show');
     Route::post('/cajas/{caja}/egreso', [DepositoController::class, 'egreso'])->name('cajas.egreso');
+    Route::post('/cajas/{caja}/a-esterilizadora', [DepositoController::class, 'aEsterilizadora'])->name('cajas.aEsterilizadora');
     Route::post('/cajas/{caja}/reparacion', [DepositoController::class, 'reparacion'])->name('cajas.reparacion');
     Route::post('/cajas/{caja}/baja', [DepositoController::class, 'baja'])->name('cajas.baja');
     Route::post('/cajas/{caja}/pdf', [CajaController::class, 'uploadPdf'])->name('cajas.pdf');

@@ -9,6 +9,7 @@ class Cirugia extends Model
 {
     protected $fillable = [
         'plc_cod',
+        'external_nco_cod',
         'paciente',
         'medico',
         'fecha_cx',
@@ -18,6 +19,7 @@ class Cirugia extends Model
         'tecnico_nombre',
         'tecnico_original_id',
         'observaciones',
+        'external_implantes',
         'access_token',
         'status'
     ];
@@ -26,6 +28,7 @@ class Cirugia extends Model
         'fecha_cx' => 'date',
         'start_time' => 'datetime',
         'end_time' => 'datetime',
+        'external_implantes' => 'array',
     ];
 
     protected static function boot()

@@ -61,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::middleware('abilities:cirugias:write')->group(function () {
         Route::post('/cirugias', [CirugiaController::class, 'store']);
+        Route::post('/cirugias/vincular-cx', [CirugiaController::class, 'vincularCx']);
         Route::put('/cirugias/{cirugia}', [CirugiaController::class, 'update']);
         Route::patch('/cirugias/{cirugia}', [CirugiaController::class, 'update']);
         Route::delete('/cirugias/{cirugia}', [CirugiaController::class, 'destroy']);

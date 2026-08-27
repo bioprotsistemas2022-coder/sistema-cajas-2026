@@ -90,29 +90,22 @@ class CajaController extends Controller
     {
         $request->validate([
             'estado' => ['required', Rule::in([
-                'DISPONIBLE', 'EN ESTERILIZADORA', 'EN CX', 'EN TRANSITO',
-                'PENDIENTE', 'ACONDICIONAMIENTO', 'EN REPARACION', 'BAJA', 'CONSIGNADA',
+                'DISPONIBLE', 'CONSIGNADA', 'PENDIENTE_DESPACHO', 'EN ESTERILIZADORA', 'EN CX', 'CX FINALIZADA',
+                'EN TRANSITO VUELTA', 'PENDIENTE', 'ACONDICIONAMIENTO', 'EN REPARACION', 'BAJA',
             ])],
             'observaciones' => ['nullable', 'string'],
         ]);
 
-        $estadoAnterior = $caja->estado;
         $estadoNuevo = $request->estado;
 
-        if ($estadoAnterior === $estadoNuevo) {
+        if (!\App\Services\BoxStateService::canTransition($caja, $estadoNuevo)) {
             throw ValidationException::withMessages([
-                'estado' => ['La caja ya se encuentra en el estado ' . $estadoNuevo . '.'],
+                'estado' => ['Transición no permitida de ' . $caja->estado . ' a ' . $estadoNuevo . '.'],
             ]);
         }
 
-        $caja->update(['estado' => $estadoNuevo]);
-
-        EventoCaja::create([
-            'caja_id' => $caja->id,
-            'user_id' => $request->user()->id,
+        \App\Services\BoxStateService::transition($caja, $estadoNuevo, $request->user()->id, [
             'responsable_nombre' => $request->user()->name,
-            'estado_anterior' => $estadoAnterior,
-            'estado_nuevo' => $estadoNuevo,
             'observaciones' => $request->observaciones,
         ]);
 

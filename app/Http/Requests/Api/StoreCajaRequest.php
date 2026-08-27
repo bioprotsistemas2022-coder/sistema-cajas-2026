@@ -18,8 +18,8 @@ class StoreCajaRequest extends FormRequest
             'nombre' => ['required', 'string', 'max:255'],
             'codigo_interno' => ['required', 'string', 'max:255', 'unique:cajas,codigo_interno'],
             'estado' => ['sometimes', Rule::in([
-                'DISPONIBLE', 'EN ESTERILIZADORA', 'EN CX', 'EN TRANSITO',
-                'PENDIENTE', 'ACONDICIONAMIENTO', 'EN REPARACION', 'BAJA', 'CONSIGNADA',
+                'DISPONIBLE', 'CONSIGNADA', 'PENDIENTE_DESPACHO', 'EN ESTERILIZADORA', 'EN CX', 'CX FINALIZADA',
+                'EN TRANSITO VUELTA', 'PENDIENTE', 'ACONDICIONAMIENTO', 'EN REPARACION', 'BAJA',
             ])],
             'pdf_path' => ['nullable', 'string'],
             'imagen_salida_path' => ['nullable', 'string'],

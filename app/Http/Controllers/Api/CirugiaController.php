@@ -5,12 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCirugiaRequest;
 use App\Http\Requests\Api\UpdateCirugiaRequest;
+use App\Http\Requests\Api\VincularCxRequest;
 use App\Http\Resources\CirugiaResource;
 use App\Models\Caja;
 use App\Models\Cirugia;
+use App\Models\Consumo;
+use App\Services\BoxStateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CirugiaController extends Controller
@@ -130,6 +134,93 @@ class CirugiaController extends Controller
         $cirugia->cajas()->detach($cajaId);
 
         return new CirugiaResource($cirugia->fresh(['cajas', 'tecnico']));
+    }
+
+    /**
+     * Vincula una CX de consignaciones: crea cirugía con todos los datos,
+     * asocia cajas por codigo_interno y las pasa a PENDIENTE_DESPACHO.
+     * Idempotente por external_nco_cod si se provee.
+     */
+    public function vincularCx(VincularCxRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+
+        $plcCod = (string) $data['plc_cod'];
+        $externalNco = $data['external_nco_cod'] ?? null;
+
+        if ($externalNco) {
+            $existente = Cirugia::where('external_nco_cod', $externalNco)
+                ->where('plc_cod', $plcCod)
+                ->first();
+            if ($existente) {
+                $existente->load(['cajas', 'consumos', 'tecnico']);
+                return response()->json([
+                    'message' => 'Cirugía ya vinculada (idempotente).',
+                    'data' => new CirugiaResource($existente),
+                    'idempotente' => true,
+                ]);
+            }
+        }
+
+        $codigos = $data['cajas'];
+        $cajas = Caja::whereIn('codigo_interno', $codigos)->get();
+        $mapCodigo = $cajas->keyBy('codigo_interno');
+        $faltantes = array_filter($codigos, fn ($c) => !isset($mapCodigo[$c]));
+        if (count($faltantes) > 0) {
+            throw ValidationException::withMessages([
+                'cajas' => ['Cajas no encontradas por codigo_interno: ' . implode(', ', $faltantes)],
+            ]);
+        }
+
+        $cajaIds = $cajas->pluck('id')->all();
+        $this->validarCajasConsignadas($cajaIds);
+
+        $observaciones = $data['observaciones'] ?? '';
+        if (!empty($data['hospital'])) {
+            $observaciones = trim($observaciones . "\nInstitución: " . $data['hospital']);
+        }
+
+        return DB::transaction(function () use ($data, $plcCod, $externalNco, $cajas, $cajaIds, $observaciones) {
+            $cirugia = Cirugia::create([
+                'plc_cod' => $plcCod,
+                'external_nco_cod' => $externalNco,
+                'paciente' => $data['paciente'],
+                'medico' => $data['medico'],
+                'fecha_cx' => $data['fecha_cx'],
+                'observaciones' => $observaciones ?: null,
+                'external_implantes' => $data['implantes'] ?? null,
+                'status' => 'PENDIENTE',
+            ]);
+
+            $cirugia->cajas()->attach($cajaIds);
+
+            if (!empty($data['implantes']) || !empty($data['detalles'])) {
+                foreach ($cajas as $caja) {
+                    Consumo::create([
+                        'cirugia_id' => $cirugia->id,
+                        'caja_id' => $caja->id,
+                        'items' => $data['implantes'] ?? [],
+                        'observaciones' => !empty($data['detalles']) ? json_encode($data['detalles']) : null,
+                    ]);
+                }
+            }
+
+            $userId = $data['user_id'] ?? auth()->id();
+            foreach ($cajas as $caja) {
+                BoxStateService::transition($caja->fresh(), 'PENDIENTE_DESPACHO', $userId, [
+                    'responsable_nombre' => 'Consignaciones PlcCod ' . $plcCod,
+                    'observaciones' => 'Vinculada a CX ' . $plcCod . ($externalNco ? " (NcoCod {$externalNco})" : ''),
+                ]);
+            }
+
+            $cirugia->load(['cajas', 'consumos', 'tecnico']);
+
+            return response()->json([
+                'message' => 'CX vinculada correctamente. Cajas en Pend. Despacho.',
+                'data' => new CirugiaResource($cirugia),
+                'cajas_afectadas' => count($cajaIds),
+            ], 201);
+        });
     }
 
     /**
