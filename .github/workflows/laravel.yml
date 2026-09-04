@@ -29,8 +29,8 @@ jobs:
           # Crear .env solo si no existe; no pisar APP_KEY existente
           if [ ! -f .env ]; then cp .env.example .env; fi
           # APP_URL debe ser https sin puerto :8000; nginx en :443 hace proxy a artisan :8000
-          sed -i "s|APP_URL=.*|APP_URL=https://cajas.bioimplantsrl.com.ar|" .env
-          if ! grep -q "^ASSET_URL=" .env; then echo "ASSET_URL=https://cajas.bioimplantsrl.com.ar" >> .env; else sed -i "s|ASSET_URL=.*|ASSET_URL=https://cajas.bioimplantsrl.com.ar|" .env; fi
+          sed -i "s|APP_URL=.*|APP_URL=http://74.50.120.7/|" .env
+          if ! grep -q "^ASSET_URL=" .env; then echo "ASSET_URL=http://74.50.120.7/" >> .env; else sed -i "s|ASSET_URL=.*|ASSET_URL=https://cajas.bioimplantsrl.com.ar|" .env; fi
           sed -i "s|APP_ENV=.*|APP_ENV=production|" .env
           sed -i "s|APP_DEBUG=.*|APP_DEBUG=false|" .env
           sed -i "s|^DB_CONNECTION=.*|DB_CONNECTION=mysql|" .env
