@@ -97,6 +97,9 @@
             <span class="fw-bold fs-5">{{ $cirugia->start_time->format('H:i') }} hs</span>
         </div>
 
+        @if($cirugia->cajas->isEmpty())
+            <div class="alert alert-warning py-2 px-3 mb-3 small">Esta cirugía no tiene cajas asociadas. No se puede reportar consumo.</div>
+        @endif
         <form action="{{ route('tecnico.surgery.finalizar', $cirugia) }}" method="POST">
             @csrf
             <div class="surgery-card mb-3">
@@ -107,7 +110,7 @@
                     @foreach($cirugia->cajas as $caja)
                         <div class="mb-3">
                             <label class="form-label form-label-bio">{{ $caja->nombre }}</label>
-                            <textarea name="consumos[{{ $caja->id }}]" required rows="2" class="form-control form-control-bio" placeholder="Declare consumos..."></textarea>
+                            <textarea name="consumos[{{ $caja->id }}]" rows="2" class="form-control form-control-bio" placeholder="Declare consumos (opcional)"></textarea>
                         </div>
                     @endforeach
                     <div class="mb-3">

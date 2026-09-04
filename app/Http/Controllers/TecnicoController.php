@@ -27,6 +27,9 @@ class TecnicoController extends Controller
 
     public function llegado(Request $request, Cirugia $cirugia)
     {
+        if ($cirugia->status !== 'PENDIENTE') {
+            return back()->with('error', 'La cirugía no está pendiente (estado: '.$cirugia->status.').');
+        }
         $userId = auth()->id();
         $data = ['observaciones' => "Llegado en condiciones para CX"];
 
@@ -38,14 +41,22 @@ class TecnicoController extends Controller
             }
         }
 
-        foreach ($cirugia->cajas as $caja) {
-            BoxStateService::transition($caja, 'EN CX', $userId, $data);
-        }
+        try {
+            foreach ($cirugia->cajas as $caja) {
+                if (!BoxStateService::canTransition($caja, 'EN CX')) {
+                    \Illuminate\Support\Facades\Log::warning("Llegado: caja {$caja->id} {$caja->codigo_interno} no puede EN CX desde {$caja->estado}");
+                }
+                BoxStateService::transition($caja, 'EN CX', $userId, $data);
+            }
 
-        $cirugia->update([
-            'status' => 'EN_CURSO',
-            'start_time' => now()
-        ]);
+            $cirugia->update([
+                'status' => 'EN_CURSO',
+                'start_time' => now()
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Llegado CX {$cirugia->id} error: ".$e->getMessage());
+            return back()->with('error', 'Error al iniciar: '.$e->getMessage());
+        }
 
         return back()->with('success', 'Cirugía iniciada. El tiempo está corriendo.');
     }
@@ -53,9 +64,14 @@ class TecnicoController extends Controller
     public function finalizar(Request $request, Cirugia $cirugia)
     {
         $request->validate([
-            'consumos' => 'required|array',
+            'consumos' => 'nullable|array',
+            'consumos.*' => 'nullable|string',
             'observaciones' => 'nullable|string'
         ]);
+
+        if ($cirugia->status !== 'EN_CURSO') {
+            return back()->with('error', 'La cirugía no está en curso (estado actual: '.$cirugia->status.').');
+        }
 
         $userId = auth()->id();
         $data = ['observaciones' => "Cirugía finalizada. Pendiente de control de consumos."];
@@ -68,21 +84,37 @@ class TecnicoController extends Controller
             }
         }
 
-        foreach ($cirugia->cajas as $caja) {
-            BoxStateService::transition($caja, 'CX FINALIZADA', $userId, $data);
+        try {
+            foreach ($cirugia->cajas as $caja) {
+                if (!BoxStateService::canTransition($caja, 'CX FINALIZADA')) {
+                    \Illuminate\Support\Facades\Log::warning("Finalizar: caja {$caja->id} {$caja->codigo_interno} no puede CX FINALIZADA desde {$caja->estado}");
+                }
+                BoxStateService::transition($caja, 'CX FINALIZADA', $userId, $data);
 
-            Consumo::create([
-                'cirugia_id' => $cirugia->id,
-                'caja_id' => $caja->id,
-                'items' => $request->consumos[$caja->id] ?? [],
-                'observaciones' => $request->observaciones
+                $raw = $request->input('consumos.'.$caja->id, '');
+                $items = is_string($raw) ? [trim($raw)] : (is_array($raw) ? $raw : []);
+                $items = array_filter($items, fn($v) => trim((string)$v) !== '');
+
+                Consumo::create([
+                    'cirugia_id' => $cirugia->id,
+                    'caja_id' => $caja->id,
+                    'items' => $items,
+                    'observaciones' => $request->observaciones
+                ]);
+            }
+
+            if ($cirugia->cajas->isEmpty()) {
+                \Illuminate\Support\Facades\Log::warning("Finalizar CX {$cirugia->id} sin cajas asociadas");
+            }
+
+            $cirugia->update([
+                'status' => 'COMPLETADA',
+                'end_time' => now()
             ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Finalizar CX {$cirugia->id} error: ".$e->getMessage());
+            return back()->with('error', 'Error al finalizar: '.$e->getMessage());
         }
-
-        $cirugia->update([
-            'status' => 'COMPLETADA',
-            'end_time' => now()
-        ]);
 
         return back()->with('success', 'Cirugía finalizada y consumos reportados.');
     }

@@ -20,6 +20,17 @@
                 <p class="brand-subtitle mb-0">Acceso Autorizado</p>
             </div>
 
+            @if (session('success'))
+                <div class="alert alert-success py-2 px-3 mb-3 small">{{ session('success') }}</div>
+            @endif
+            @if (session('error'))
+                <div class="alert alert-danger py-2 px-3 mb-3 small">{{ session('error') }}</div>
+            @endif
+            @if ($errors->any())
+                <div class="alert alert-danger py-2 px-3 mb-3 small">
+                    <ul class="mb-0 ps-3">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                </div>
+            @endif
             {{ $slot }}
         </div>
     </body>
