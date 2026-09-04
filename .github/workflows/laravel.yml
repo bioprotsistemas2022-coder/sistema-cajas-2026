@@ -28,7 +28,7 @@ jobs:
 
           # Crear .env solo si no existe; no pisar APP_KEY existente
           if [ ! -f .env ]; then cp .env.example .env; fi
-          # APP_URL https sin :8000 — nginx termina SSL en 443 y proxea a artisan en 8000
+          # APP_URL https sin :8000 — Apache termina SSL en 443 y proxea a artisan en 8000
           sed -i "s|APP_URL=.*|APP_URL=https://cajas.bioimplantsrl.com.ar|" .env
           if ! grep -q "^ASSET_URL=" .env; then echo "ASSET_URL=https://cajas.bioimplantsrl.com.ar" >> .env; else sed -i "s|ASSET_URL=.*|ASSET_URL=https://cajas.bioimplantsrl.com.ar|" .env; fi
           sed -i "s|APP_ENV=.*|APP_ENV=production|" .env
@@ -51,6 +51,8 @@ jobs:
           php artisan route:cache
           php artisan view:cache
 
-          # Reiniciar servidor Laravel (tmux) + asegurar nginx proxy https 443 -> 8000
-          if [ -f docs/nginx/cajas.bioimplantsrl.com.ar.conf ]; then sudo cp docs/nginx/cajas.bioimplantsrl.com.ar.conf /etc/nginx/sites-available/cajas.bioimplantsrl.com.ar.conf; sudo ln -sf /etc/nginx/sites-available/cajas.bioimplantsrl.com.ar.conf /etc/nginx/sites-enabled/cajas.bioimplantsrl.com.ar.conf; sudo nginx -t && sudo systemctl reload nginx || true; fi
+          # Configurar Apache como reverse proxy HTTPS 443 -> artisan 8000
+          sudo a2enmod proxy proxy_http headers ssl rewrite 2>/dev/null || true
+          if [ -f docs/apache/cajas.bioimplantsrl.com.ar.conf ]; then sudo cp docs/apache/cajas.bioimplantsrl.com.ar.conf /etc/apache2/sites-available/cajas.bioimplantsrl.com.ar.conf; sudo a2ensite cajas.bioimplantsrl.com.ar.conf 2>/dev/null || true; sudo apache2ctl configtest && sudo systemctl reload apache2 || true; fi
+          # Si no hay cert aún, generar con: sudo certbot --apache -d cajas.bioimplantsrl.com.ar
           tmux send-keys -t laravel "php artisan serve --host=0.0.0.0 --port=8000" Enter
