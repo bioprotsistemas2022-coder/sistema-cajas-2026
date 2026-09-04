@@ -28,9 +28,9 @@ jobs:
 
           # Crear .env solo si no existe; no pisar APP_KEY existente
           if [ ! -f .env ]; then cp .env.example .env; fi
-          # APP_URL debe ser https sin puerto :8000; nginx en :443 hace proxy a artisan :8000
-          sed -i "s|APP_URL=.*|APP_URL=http://74.50.120.7/|" .env
-          if ! grep -q "^ASSET_URL=" .env; then echo "ASSET_URL=http://74.50.120.7/" >> .env; else sed -i "s|ASSET_URL=.*|ASSET_URL=https://cajas.bioimplantsrl.com.ar|" .env; fi
+          # APP_URL https sin :8000 — nginx termina SSL en 443 y proxea a artisan en 8000
+          sed -i "s|APP_URL=.*|APP_URL=https://cajas.bioimplantsrl.com.ar|" .env
+          if ! grep -q "^ASSET_URL=" .env; then echo "ASSET_URL=https://cajas.bioimplantsrl.com.ar" >> .env; else sed -i "s|ASSET_URL=.*|ASSET_URL=https://cajas.bioimplantsrl.com.ar|" .env; fi
           sed -i "s|APP_ENV=.*|APP_ENV=production|" .env
           sed -i "s|APP_DEBUG=.*|APP_DEBUG=false|" .env
           sed -i "s|^DB_CONNECTION=.*|DB_CONNECTION=mysql|" .env
@@ -53,4 +53,4 @@ jobs:
 
           # Reiniciar servidor Laravel (tmux) + asegurar nginx proxy https 443 -> 8000
           if [ -f docs/nginx/cajas.bioimplantsrl.com.ar.conf ]; then sudo cp docs/nginx/cajas.bioimplantsrl.com.ar.conf /etc/nginx/sites-available/cajas.bioimplantsrl.com.ar.conf; sudo ln -sf /etc/nginx/sites-available/cajas.bioimplantsrl.com.ar.conf /etc/nginx/sites-enabled/cajas.bioimplantsrl.com.ar.conf; sudo nginx -t && sudo systemctl reload nginx || true; fi
-          tmux send-keys -t laravel "php artisan serve --host=127.0.0.1 --port=8000" Enter
+          tmux send-keys -t laravel "php artisan serve --host=0.0.0.0 --port=8000" Enter
