@@ -1,4 +1,3 @@
-PRUEBA
 
 # Bioimplant — Sistema de Gestión y Trazabilidad de Cajas Quirúrgicas
 
