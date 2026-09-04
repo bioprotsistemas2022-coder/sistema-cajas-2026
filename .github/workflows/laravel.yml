@@ -51,8 +51,11 @@ jobs:
           php artisan route:cache
           php artisan view:cache
 
-          # Configurar Apache como reverse proxy HTTPS 443 -> artisan 8000
+          # Configurar Apache como reverse proxy HTTPS 443 -> artisan 8000 (manteniendo 000-default-le-ssl)
           sudo a2enmod proxy proxy_http headers ssl rewrite 2>/dev/null || true
-          if [ -f docs/apache/cajas.bioimplantsrl.com.ar.conf ]; then sudo cp docs/apache/cajas.bioimplantsrl.com.ar.conf /etc/apache2/sites-available/cajas.bioimplantsrl.com.ar.conf; sudo a2ensite cajas.bioimplantsrl.com.ar.conf 2>/dev/null || true; sudo apache2ctl configtest && sudo systemctl reload apache2 || true; fi
+          if [ -f docs/apache/cajas.bioimplantsrl.com.ar.conf ]; then sudo cp docs/apache/cajas.bioimplantsrl.com.ar.conf /etc/apache2/sites-available/cajas.bioimplantsrl.com.ar.conf; sudo a2ensite cajas.bioimplantsrl.com.ar.conf 2>/dev/null || true; fi
+          # Evitar conflicto de ServerName duplicado manteniendo 000-default como fallback: quitarle el ServerName de cajas si existe
+          if grep -q "cajas.bioimplantsrl.com.ar" /etc/apache2/sites-available/000-default-le-ssl.conf 2>/dev/null; then sudo sed -i "s/ServerName cajas.bioimplantsrl.com.ar/ServerName _default_/" /etc/apache2/sites-available/000-default-le-ssl.conf 2>/dev/null || true; fi
+          sudo apache2ctl configtest && sudo systemctl reload apache2 || true
           # Si no hay cert aún, generar con: sudo certbot --apache -d cajas.bioimplantsrl.com.ar
           tmux send-keys -t laravel "php artisan serve --host=0.0.0.0 --port=8000" Enter
