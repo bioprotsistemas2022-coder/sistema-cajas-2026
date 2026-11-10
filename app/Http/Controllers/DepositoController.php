@@ -47,7 +47,38 @@ class DepositoController extends Controller
             ->keyBy('caja_id');
         $grupos = Grupo::with('cajas')->get();
         $cajasDisponibles = Caja::where('estado', 'CONSIGNADA')->orderBy('nombre')->get();
-        return view('deposito.dashboard', compact('cajas', 'stats', 'tecnicos', 'tokensActivos', 'grupos', 'cajasDisponibles'));
+        $cirugiasPendientes = Cirugia::where('status', 'PENDIENTE')->orderByDesc('fecha_cx')->get();
+        return view('deposito.dashboard', compact('cajas', 'stats', 'tecnicos', 'tokensActivos', 'grupos', 'cajasDisponibles', 'cirugiasPendientes'));
+    }
+
+    /**
+     * Vincula una caja CONSIGNADA a una cirugía (CX) ya existente y la pasa
+     * a PENDIENTE_DESPACHO, sin avanzar a Esterilizadora. Replica, desde este
+     * dashboard, lo que el módulo de Consignaciones hace vía /api/cirugias/vincular-cx.
+     */
+    public function vincularCx(Request $request, Caja $caja)
+    {
+        $request->validate([
+            'cirugia_id' => 'required|exists:cirugias,id',
+        ]);
+
+        if (!$caja->puedeIrADespacho()) {
+            return back()->with('error', 'Solo cajas Consignadas pueden vincularse a una CX. La caja "' . $caja->nombre . '" está "' . $caja->estadoLabel() . '".');
+        }
+
+        $cirugia = Cirugia::findOrFail($request->cirugia_id);
+
+        if ($cirugia->cajas()->where('cajas.id', $caja->id)->exists()) {
+            return back()->with('error', 'La caja "' . $caja->nombre . '" ya está vinculada a esa CX.');
+        }
+
+        $cirugia->cajas()->attach($caja->id);
+
+        BoxStateService::transition($caja, 'PENDIENTE_DESPACHO', auth()->id(), [
+            'observaciones' => 'Vinculada a CX' . ($cirugia->plc_cod ? ' PlcCod ' . $cirugia->plc_cod : '') . ' (' . $cirugia->paciente . ') desde Gestión de Inventario',
+        ]);
+
+        return back()->with('success', "{$caja->nombre} vinculada a la CX de {$cirugia->paciente} y pasada a Pend. Despacho.");
     }
 
     public function egreso(Request $request, Caja $caja)

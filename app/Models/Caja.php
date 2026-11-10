@@ -21,6 +21,11 @@ class Caja extends Model
         return $this->belongsToMany(Cirugia::class);
     }
 
+    public function consignaciones()
+    {
+        return $this->hasMany(CajaConsignacion::class);
+    }
+
     public function eventos()
     {
         return $this->hasMany(EventoCaja::class);

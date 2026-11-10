@@ -31,7 +31,7 @@
                         </li>
                         @if(in_array($role, ['admin', 'deposito']))
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle {{ request()->routeIs('deposito.*') || request()->routeIs('cajas.*') || request()->routeIs('admin.cajas.*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
+                                <a class="nav-link dropdown-toggle {{ request()->routeIs('deposito.*') || request()->routeIs('cajas.*') || request()->routeIs('admin.cajas.*') || request()->routeIs('consignaciones.*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown">
                                     <i class="bi bi-box-seam me-1"></i> Inventario
                                 </a>
                                 <ul class="dropdown-menu">
@@ -40,6 +40,9 @@
                                     </a></li>
                                     <li><a class="dropdown-item {{ request()->routeIs('cajas.*') ? 'active' : '' }}" href="{{ route('cajas.index') }}">
                                         <i class="bi bi-grid me-2"></i> Listado Cajas
+                                    </a></li>
+                                    <li><a class="dropdown-item {{ request()->routeIs('consignaciones.*') ? 'active' : '' }}" href="{{ route('consignaciones.index') }}">
+                                        <i class="bi bi-link-45deg me-2"></i> Consignaciones
                                     </a></li>
                                     @if($role === 'admin')
                                     <li><hr class="dropdown-divider"></li>
@@ -151,6 +154,14 @@
                 <div class="alert alert-success alert-bio alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
                     <i class="bi bi-check-circle-fill fs-5 me-2 flex-shrink-0"></i>
                     <span>{!! session('success') !!}</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="alert alert-danger alert-bio alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill fs-5 me-2 flex-shrink-0"></i>
+                    <span>{!! session('error') !!}</span>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                 </div>
             @endif

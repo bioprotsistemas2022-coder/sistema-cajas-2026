@@ -191,6 +191,55 @@
                 </div>
             </div>
 
+            <div class="card card-elegante mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-box-arrow-up me-2" style="color:#4338ca;"></i>Historial de Consignaciones</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if($caja->consignaciones->isEmpty())
+                        <div class="text-center py-4"><p class="text-muted mb-0 small">Sin consignaciones registradas</p></div>
+                    @else
+                        @foreach($caja->consignaciones->sortByDesc('fecha_consignacion') as $consignacion)
+                            <div class="p-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <div class="fw-semibold" style="color:#0f172a;">{{ $consignacion->consignatario_nombre }}</div>
+                                        <small style="color:#94a3b8;">{{ $consignacion->fecha_consignacion->format('d/m/Y') }}</small>
+                                    </div>
+                                    @if($consignacion->pdf_path)
+                                        <a href="{{ Storage::url($consignacion->pdf_path) }}" target="_blank" class="btn btn-outline-secondary btn-bio btn-sm">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                                        </a>
+                                    @endif
+                                </div>
+                                @if($consignacion->observaciones)
+                                    <p class="mb-2 small" style="color:#64748b;">{{ $consignacion->observaciones }}</p>
+                                @endif
+                                @if($consignacion->items->isNotEmpty())
+                                    <div class="table-responsive">
+                                        <table class="table table-bio table-sm mb-0">
+                                            <thead><tr><th>Cant.</th><th>Descripción</th><th>Sección</th><th class="text-center">Incl.</th></tr></thead>
+                                            <tbody>
+                                                @foreach($consignacion->items as $item)
+                                                    <tr>
+                                                        <td>{{ $item->cantidad }}</td>
+                                                        <td>{{ $item->descripcion }}</td>
+                                                        <td class="text-muted small">{{ $item->seccion ?: '—' }}</td>
+                                                        <td class="text-center">@if($item->incluido)<i class="bi bi-check-lg text-success"></i>@endif</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @else
+                                    <p class="mb-0 small text-muted">Sin ítems cargados.</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    @endif
+                </div>
+            </div>
+
             <div class="card card-elegante">
                 <div class="card-header">
                     <h5><i class="bi bi-clock-history me-2" style="color:#8b5cf6;"></i>Historial</h5>

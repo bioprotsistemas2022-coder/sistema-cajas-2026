@@ -10,6 +10,7 @@ use App\Http\Controllers\CajaController;
 use App\Http\Controllers\AdminTecnicoController;
 use App\Http\Controllers\AdminCajaController;
 use App\Http\Controllers\GrupoController;
+use App\Http\Controllers\ConsignacionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -35,6 +36,12 @@ Route::middleware(['auth', 'role:admin,deposito'])->group(function () {
     Route::get('/cajas', [CajaController::class, 'index'])->name('cajas.index');
     Route::get('/cajas/{caja}', [CajaController::class, 'show'])->name('cajas.show');
     Route::post('/cajas/{caja}/egreso', [DepositoController::class, 'egreso'])->name('cajas.egreso');
+    Route::post('/cajas/{caja}/vincular-cx', [DepositoController::class, 'vincularCx'])->name('cajas.vincularCx');
+    Route::get('/consignaciones', [ConsignacionController::class, 'index'])->name('consignaciones.index');
+    Route::post('/cajas/{caja}/consignar/extraer', [ConsignacionController::class, 'extraer'])->name('cajas.consignar.extraer');
+    Route::post('/cajas/{caja}/consignar', [ConsignacionController::class, 'consignar'])->name('cajas.consignar');
+    Route::post('/cajas/{caja}/devolver', [ConsignacionController::class, 'devolver'])->name('cajas.devolver');
+    Route::get('/cajas/{caja}/consignaciones', [ConsignacionController::class, 'historial'])->name('cajas.consignaciones.historial');
     Route::post('/cajas/{caja}/a-esterilizadora', [DepositoController::class, 'aEsterilizadora'])->name('cajas.aEsterilizadora');
     Route::post('/cajas/{caja}/reparacion', [DepositoController::class, 'reparacion'])->name('cajas.reparacion');
     Route::post('/cajas/{caja}/baja', [DepositoController::class, 'baja'])->name('cajas.baja');

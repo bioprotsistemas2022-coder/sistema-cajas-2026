@@ -18,6 +18,12 @@
                         </div>
                     </div>
                     <div class="col-3">
+                        <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#eef2ff,#e0e7ff);">
+                            <div class="stat-value mb-1" style="color:#4338ca;">{{ $stats['CONSIGNADA'] ?? 0 }}</div>
+                            <div class="stat-label" style="color:#4338ca;">Consignadas</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
                         <div class="stat-card text-center py-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
                             <div class="stat-value text-primary mb-1">{{ $stats['EN ESTERILIZADORA'] ?? 0 }}</div>
                             <div class="stat-label text-primary">Esterilización</div>
@@ -75,6 +81,91 @@
             </div>
         </div>
     </div>
+
+    <div class="card card-elegante mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between" style="background:linear-gradient(135deg,#eef2ff,#e0e7ff);">
+            <h5 class="mb-0" style="color:#4338ca;"><i class="bi bi-link-45deg me-2" style="color:#4338ca;"></i>Cajas Consignadas — Vincular a CX</h5>
+            <span class="badge" style="background:#fff;color:#4338ca;font-weight:700;padding:0.5em 1em;border-radius:50rem;">
+                {{ $cajasDisponibles->count() }} Consignada{{ $cajasDisponibles->count() === 1 ? '' : 's' }}
+            </span>
+        </div>
+        <div class="card-body p-0">
+            @if($cajasDisponibles->isEmpty())
+                <div class="p-4 text-center text-muted small">No hay cajas Consignadas esperando vincularse a una CX.</div>
+            @else
+                <div class="table-responsive">
+                    <table class="table table-bio table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Caja</th>
+                                <th>Código</th>
+                                <th>Consignatario</th>
+                                <th>Fecha consignación</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($cajasDisponibles as $caja)
+                                <tr>
+                                    <td class="fw-bold" style="color:#0f172a;">{{ $caja->nombre }}</td>
+                                    <td><code class="bg-light px-2 py-1 rounded-3" style="color:#475569;">{{ $caja->codigo_interno }}</code></td>
+                                    <td>{{ $caja->consignatario_nombre ?: '—' }}</td>
+                                    <td>{{ $caja->fecha_consignacion ? \Illuminate\Support\Carbon::parse($caja->fecha_consignacion)->format('d/m/Y') : '—' }}</td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-outline-primary btn-bio btn-sm" data-bs-toggle="modal" data-bs-target="#modal-vincular-{{ $caja->id }}">
+                                            <i class="bi bi-link-45deg me-1"></i> Vincular a CX
+                                        </button>
+                                        <a href="{{ route('cajas.show', $caja) }}" class="btn btn-outline-secondary btn-bio btn-sm">
+                                            <i class="bi bi-eye me-1"></i> Detalles
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- Modales Vincular a CX (cajas Consignadas) --}}
+    @foreach($cajasDisponibles as $caja)
+        <div class="modal fade" id="modal-vincular-{{ $caja->id }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg rounded-4">
+                    <div class="modal-header border-bottom bg-light px-4 py-3 rounded-top-4" style="background:linear-gradient(135deg,#eef2ff,#e0e7ff);">
+                        <h5 class="mb-0 fw-bold" style="color:#4338ca;"><i class="bi bi-link-45deg me-2" style="color:#4338ca;"></i>Vincular a CX — {{ $caja->nombre }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ route('cajas.vincularCx', $caja) }}" method="POST">
+                        @csrf
+                        <div class="modal-body px-4 py-4">
+                            <p class="small text-muted">Vincula esta caja a una cirugía (CX) ya cargada — por ejemplo, una creada desde el módulo de Consignaciones — y la pasa a <strong>Pend. Despacho</strong>, sin avanzar a Esterilizadora.</p>
+                            @if($cirugiasPendientes->isEmpty())
+                                <div class="alert alert-warning small mb-0">No hay cirugías pendientes para vincular todavía. Se crean automáticamente al asignar una CX desde Consignaciones, o pueden cargarse manualmente.</div>
+                            @else
+                                <label class="form-label form-label-bio">Cirugía (CX) destino</label>
+                                <select name="cirugia_id" class="form-select form-control-bio" required>
+                                    <option value="">Seleccionar CX...</option>
+                                    @foreach($cirugiasPendientes as $cx)
+                                        <option value="{{ $cx->id }}">
+                                            {{ $cx->plc_cod ? 'PlcCod ' . $cx->plc_cod . ' — ' : '' }}{{ $cx->paciente }} — {{ $cx->medico }} — {{ \Illuminate\Support\Carbon::parse($cx->fecha_cx)->format('d/m/Y') }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @endif
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4 border-top">
+                            <button type="button" class="btn btn-outline-secondary btn-bio" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary btn-bio" @if($cirugiasPendientes->isEmpty()) disabled @endif>
+                                <i class="bi bi-link-45deg me-1"></i> Vincular y pasar a Pend. Despacho
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
 
     <div class="card card-elegante mb-4">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-3">
