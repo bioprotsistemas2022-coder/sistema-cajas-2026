@@ -1,373 +1,381 @@
-
 # Bioimplant — Sistema de Gestión y Trazabilidad de Cajas Quirúrgicas
 
-Sistema web para administrar el ciclo de vida completo de cajas de instrumental quirúrgico en un centro médico. Desarrollado en **Laravel 12** con **Bootstrap 5** y **MySQL**.
+Sistema web para administrar el ciclo de vida completo de cajas de instrumental quirúrgico consignado: desde que la caja se consigna (con su remito en PDF), se asigna a una cirugía (CX), se esteriliza, se usa, se retira, se audita y se acondiciona, hasta que vuelve a estar disponible. Cada cambio de estado queda registrado en un historial auditable.
+
+Desarrollado con **Laravel 12**, **Bootstrap 5** y **MySQL**. Expone además una **API REST (Sanctum)** para integrarse con el módulo externo de Consignaciones.
 
 ---
 
 ## Arquitectura
 
-**Stack:** PHP 8.4 / Laravel 12 / MySQL 8 + PDO-MySQL / Vite + Bootstrap 5 + Bootstrap Icons
+**Stack:** PHP 8.4 (mínimo 8.2) / Laravel 12 / MySQL 8 / Laravel Sanctum / smalot/pdfparser / Vite + Bootstrap 5 + Bootstrap Icons
 
 ```
 Sistema-Cajas-2026/
 ├── app/
 │   ├── Http/
-│   │   ├── Controllers/     → 9 controladores (CRUD, procesos)
-│   │   ├── Middleware/       → RoleMiddleware (control de acceso por rol)
-│   │   └── Requests/        → Validaciones de formularios
-│   ├── Models/               → 5 modelos Eloquent
+│   │   ├── Controllers/
+│   │   │   ├── (web)  Deposito, Caja, AdminCaja, AdminTecnico, Grupo, Consignacion,
+│   │   │   │          Tecnico, Consumo, Logistica, Acondicionador, Profile
+│   │   │   ├── Api/   Auth, Caja, Cirugia, Consignacion, Consumo, Evento, Grupo
+│   │   │   └── Auth/  Controladores de autenticación (Breeze)
+│   │   ├── Middleware/RoleMiddleware   → control de acceso por rol
+│   │   ├── Requests/                   → Validaciones (Api/, Auth/, Profile)
+│   │   └── Resources/                  → Transformadores JSON de la API
+│   ├── Models/                         → 10 modelos Eloquent
 │   └── Services/
-│       └── BoxStateService   → Máquina de estados de cajas
-├── database/
-│   └── migrations/           → 6 migraciones + 2 de Laravel base
-├── resources/
-│   ├── css/app.css           → Estilos Bootstrap personalizados
-│   ├── js/app.js             → Bootstrap JS
-│   └── views/                → 9 vistas Blade con layout x2
+│       ├── BoxStateService                  → Máquina de estados + historial
+│       ├── ConsignacionesPollService        → Polling del módulo externo de Consignaciones
+│       ├── InstrumentalPdfExtractorService  → Extrae instrumental desde el PDF del remito
+│       └── ProcedureApiService              → Búsqueda de procedimientos en API externa
+├── database/migrations/                → 25 migraciones
+├── resources/views/                    → Vistas Blade (ver sección Vistas)
 ├── routes/
-│   └── web.php               → ~25 rutas agrupadas por middleware
-├── public/
-│   ├── build/                → Assets compilados por Vite
-│   └── storage/              → PDFs e imágenes (link simbólico)
-└── storage/app/public/cajas/
-    ├── pdfs/                 → Notas de consignación (PDF)
-    └── imagenes/             → Fotos de instrumental
+│   ├── web.php                         → Rutas web (sesión + roles)
+│   ├── api.php                         → API REST (/api, Sanctum + abilities)
+│   └── console.php                     → Scheduler (poll de consignaciones cada 2 min)
+├── docs/
+│   ├── API_CONSIGNACIONES.md           → Documentación detallada de la API
+│   ├── apache/ y nginx/                → Configuración del reverse proxy HTTPS
+└── .github/workflows/                  → CI/CD (deploy.yml, laravel.yml)
 ```
 
 ---
 
-## Base de Datos — 6 Tablas
+## Base de Datos
 
-### `users` (usuarios)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | PK | |
-| name | string | Nombre completo |
-| email | string (unique) | Login |
-| password | hashed | |
-| role | enum('admin','deposito','tecnico','consumo','acondicionador') | Control de acceso |
+### `users`
+| Campo | Descripción |
+|-------|-------------|
+| name, email (unique), password | Datos de acceso |
+| role | enum: `admin`, `deposito`, `tecnico`, `consumo`, `acondicionador`, `logistica` (default `deposito`) |
 
-### `cajas` (cajas de instrumental)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | PK | |
-| nombre | string | Nombre descriptivo (ej: "Caja Traumatología") |
-| codigo_interno | string (unique) | Código único (ej: "CX-001") |
-| estado | enum | DISPONIBLE / EN ESTERILIZADORA / EN CX / EN TRANSITO / PENDIENTE / ACONDICIONAMIENTO / EN REPARACION / BAJA |
-| pdf_path | string?null | Ruta al PDF de nota de consignación |
-| created_at / updated_at | timestamps | |
+### `cajas`
+| Campo | Descripción |
+|-------|-------------|
+| nombre | Nombre descriptivo |
+| codigo_interno (unique) | Código único. El poll de consignaciones busca `CAJA-{NcoCac}` |
+| estado | enum de 11 estados (ver Máquina de estados). Default `DISPONIBLE` |
+| consignatario_nombre, fecha_consignacion | Datos de la consignación vigente |
+| pdf_path | PDF del remito (storage público) |
+| imagen_salida_path | Imagen de salida (usada por la API) |
 
-### `cirugias` (cirugías)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | PK | |
-| bioimplant_id | string?null | ID externo del paciente |
-| paciente | string | Nombre del paciente |
-| medico | string | Nombre del médico |
-| fecha_cx | date | Fecha programada |
-| start_time | timestamp?null | Inicio real de cirugía |
-| end_time | timestamp?null | Fin real de cirugía |
-| tecnico_id | FK→users | Técnico asignado |
-| access_token | string(32) | Token único para acceso público a vista de cirugía |
-| status | enum | PENDIENTE / EN_CURSO / COMPLETADA / CANCELADA |
+### `caja_consignaciones` y `caja_consignacion_items`
+Historial de consignaciones de cada caja y el instrumental detallado de cada una.
 
-### `caja_cirugia` (PIVOT — relación muchos a muchos)
-| Campo | Tipo |
-|-------|------|
-| caja_id | FK→cajas |
-| cirugia_id | FK→cirugias |
+| Tabla | Campos |
+|-------|--------|
+| caja_consignaciones | caja_id, user_id, consignatario_nombre, fecha_consignacion, observaciones, pdf_path |
+| caja_consignacion_items | caja_consignacion_id, seccion, cantidad, descripcion, incluido (bool) |
+
+### `cirugias`
+| Campo | Descripción |
+|-------|-------------|
+| plc_cod | Código de planilla de CX (PlcCod) del sistema externo |
+| external_nco_cod | Código de nota de consignación externa (NcoCod) |
+| external_implantes | JSON con implantes informados por el sistema externo |
+| paciente, medico, fecha_cx | Datos de la CX |
+| observaciones | Texto libre |
+| start_time, end_time | Inicio y fin reales |
+| tecnico_id | FK → users (nullable) |
+| tecnico_nombre | Nombre de técnico **externo** (cuando no es usuario del sistema) |
+| tecnico_original_id | Técnico original si fue reasignado |
+| access_token | Token único (32 chars) para el acceso público a la vista de CX |
+| status | `PENDIENTE`, `EN_CURSO`, `COMPLETADA`, `CANCELADA`, `POSTPUESTA` |
+
+### `caja_cirugia` (pivote)
+`caja_id`, `cirugia_id` — relación muchos a muchos.
 
 ### `evento_cajas` (historial de estados)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | PK | |
-| caja_id | FK→cajas | |
-| user_id | FK→users | Quién hizo el cambio |
-| estado_anterior | string | Estado antes del cambio |
-| estado_nuevo | string | Estado después del cambio |
-| observaciones | text?null | Nota del operador |
-| fotos | json?null | (reservado para futuro) |
+`caja_id`, `user_id` (nullable), `responsable_nombre` (cuando actúa una persona externa sin usuario), `estado_anterior`, `estado_nuevo`, `observaciones`, `fotos` (JSON, reservado).
 
-### `caja_imagenes` (imágenes de cajas)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | PK | |
-| caja_id | FK→cajas | |
-| ruta | string | Ruta relativa en storage/app/public/ |
-| descripcion | string?null | Texto descriptivo |
-| created_at | timestamp | Fecha de carga |
+### `caja_imagenes`
+`caja_id`, `ruta`, `descripcion`. Modelo `CajaImagen` con `$table = 'caja_imagenes'`.
 
-### `consumos` (consumo de insumos por cirugía)
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | PK | |
-| cirugia_id | FK→cirugias | |
-| caja_id | FK→cajas | |
-| items | json | Array de insumos consumidos (estructura libre) |
-| observaciones | text?null | Notas adicionales |
+### `consumos`
+`cirugia_id`, `caja_id`, `items` (JSON), `observaciones`. Se crea al finalizar la CX; también lo puede crear el poll de consignaciones con los implantes externos.
+
+### `grupos` y `grupo_caja`
+Agrupación de cajas (p. ej. un set completo para un tipo de cirugía). `grupo_caja` tiene unique (`grupo_id`, `caja_id`).
+
+### `tokens_accion`
+Links públicos de un solo uso (24 h) para que una persona externa ejecute una acción de recepción. Campos: `token`, `accion`, `caja_id`, `responsable_nombre`, `params` (JSON), `expires_at`, `used_at`.
+
+### Tablas de Laravel
+`personal_access_tokens` (Sanctum), `sessions`, `cache`, `jobs`, etc.
 
 ---
 
 ## Máquina de Estados de Cajas
 
-El núcleo del sistema es `BoxStateService` que define transiciones válidas y registra cada cambio en `evento_cajas`.
+`BoxStateService::canTransition()` define las transiciones válidas y `BoxStateService::transition()` aplica el cambio y registra el evento en `evento_cajas`, todo dentro de una transacción.
 
 ```
-                    ┌─────────────────────────────────────────────────────┐
-                    │                                                     │
-                    ▼                                                     │
-              ┌──────────┐     ┌──────────────────┐     ┌──────────────┐ │
-  ┌──────┐    │          │     │                  │     │              │ │
-  │      │    │ EN ESTE- │────>│      EN CX       │────>│ EN TRANSITO  │ │
-  │      │    │ RILIZAD. │     │                  │     │              │ │
-  │      │    └────┬─────┘     └────┬─────────────┘     └──────┬───────┘ │
-  │      │         │               │                         │          │
-  │ DIS- │         │   ┌───────────┘                         │          │
-  │ PONI-│         │   │  (falla)                            │          │
-  │ BLE  │         ▼   ▼                                     ▼          │
-  │      │    ┌──────────────────┐     ┌──────────────┐     ┌──────────┐│
-  │      │    │                  │     │              │     │          ││
-  │      │    │  EN REPARACION   │<────│  PENDIENTE   │<────│PENDIENTE ││
-  │      │    │                  │     │  (Auditoría) │     │(llegó)   ││
-  │      │    └────────┬─────────┘     └──────────────┘     └──────────┘│
-  │      │             │                                              │
-  │      │             ▼                                              │
-  │      │    ┌──────────────────┐     ┌──────────────────┐          │
-  │      │    │                  │────>│                  │──────────┘
-  │      │    │      BAJA        │     │ ACONDICIONAMIENTO│
-  └──────┘    └──────────────────┘     └──────────────────┘
-```
+DISPONIBLE ──► CONSIGNADA ──► PENDIENTE_DESPACHO ──► EN ESTERILIZADORA ──► EN CX
+ (Sin Consignar)  (remito)      (vinculada a CX)                              │
+     ▲                                                                        ▼
+     │                                                                  CX FINALIZADA
+     │                                                                        │
+     │                                                                        ▼
+ ACONDICIONAMIENTO ◄── PENDIENTE ◄───────────── EN TRANSITO VUELTA ◄──────────┘
+     │            (auditoría)    (recibida)       (retirada por logística)
+     └──► DISPONIBLE
 
-**Transiciones válidas por estado:**
+ Desde varios estados: ──► EN REPARACION ──► DISPONIBLE | BAJA
+```
 
 | Estado actual | Puede ir a |
 |---------------|------------|
-| DISPONIBLE | EN ESTERILIZADORA, EN REPARACION, BAJA |
+| DISPONIBLE (Sin Consignar) | CONSIGNADA, EN REPARACION, BAJA |
+| CONSIGNADA | PENDIENTE_DESPACHO, DISPONIBLE, EN REPARACION, BAJA |
+| PENDIENTE_DESPACHO | EN ESTERILIZADORA, DISPONIBLE, EN REPARACION |
 | EN ESTERILIZADORA | EN CX, DISPONIBLE, EN REPARACION |
-| EN CX | EN TRANSITO, EN REPARACION |
-| EN TRANSITO | PENDIENTE |
+| EN CX | CX FINALIZADA, EN REPARACION, DISPONIBLE |
+| CX FINALIZADA | EN TRANSITO VUELTA, EN REPARACION, DISPONIBLE |
+| EN TRANSITO VUELTA | PENDIENTE |
 | PENDIENTE | ACONDICIONAMIENTO, EN REPARACION |
 | ACONDICIONAMIENTO | DISPONIBLE |
 | EN REPARACION | DISPONIBLE, BAJA |
-| BAJA | (ninguno — estado terminal) |
+| BAJA | (terminal) |
+
+Etiquetas en la UI (`Caja::estadoLabels()`): `DISPONIBLE` se muestra como **"Sin Consignar"** y `PENDIENTE_DESPACHO` como "Pend. Despacho".
+
+**Regla de negocio:** solo las cajas `CONSIGNADA` pueden vincularse a una CX.
 
 ---
 
 ## Roles y Permisos
 
-Middleware `role:admin,rol2,rol3...` en cada grupo de rutas. `RoleMiddleware` verifica que `auth()->user()->role` esté en la lista.
+Se controla con el middleware `role:rol1,rol2,...` (`RoleMiddleware`).
 
-| Rol | Descripción | Acceso |
-|-----|-------------|--------|
-| **admin** | Super-administrador | TODAS las rutas (dashboard depósito, recepción, lavado, cirugías, admin técnicos, admin cajas) |
-| **deposito** | Encargado de depósito | Dashboard depósito, listado cajas, detalle caja, egreso/reparación/baja, admin técnicos (solo lectura en teoría) |
-| **tecnico** | Técnico quirúrgico | Dashboard cirugías asignadas |
-| **consumo** | Auditor de recepción | Dashboard recepción (control de tránsito y auditoría) |
-| **acondicionador** | Encargado de lavado | Dashboard lavado (disponibilizar cajas) |
+| Rol | Descripción | Acceso web |
+|-----|-------------|------------|
+| **admin** | Super-administrador | Todas las áreas, incluido ABM de cajas |
+| **deposito** | Encargado de depósito | Inventario, consignaciones, grupos, técnicos, egresos, reparación/baja, CX |
+| **tecnico** | Técnico quirúrgico | Sus cirugías asignadas (`/tecnico`) |
+| **consumo** | Auditor de recepción | Recepción y auditoría (`/consumo`) |
+| **logistica** | Retiro de cajas | Retiro desde el servicio (`/logistica`) |
+| **acondicionador** | Lavado | Acondicionamiento (`/acondicionamiento`) |
+
+> Nota: el menú muestra "Recepción" a `deposito`, pero las rutas `/consumo*` solo permiten `admin` y `consumo`.
 
 ---
 
-## Rutas
+## Rutas Web
 
-| Método | URL | Controlador@método | Middleware | Nombre |
-|--------|-----|-------------------|------------|--------|
-| GET | / | vista auth.login | — | — |
-| GET | /dashboard | redirect según role | auth, verified | dashboard |
-| **DEPÓSITO** (admin + depósito) | | | | |
-| GET | /admin, /deposito | DepositoController@index | auth, role:admin,deposito | admin.dashboard / deposito.dashboard |
-| GET | /cajas | CajaController@index | auth, role:admin,deposito | cajas.index |
-| GET | /cajas/{caja} | CajaController@show | auth, role:admin,deposito | cajas.show |
-| POST | /cajas/{caja}/egreso | DepositoController@egreso | auth, role:admin,deposito | cajas.egreso |
-| POST | /cajas/{caja}/reparacion | DepositoController@reparacion | auth, role:admin,deposito | cajas.reparacion |
-| POST | /cajas/{caja}/baja | DepositoController@baja | auth, role:admin,deposito | cajas.baja |
-| POST | /cajas/{caja}/pdf | CajaController@uploadPdf | auth, role:admin,deposito | cajas.pdf |
-| DELETE | /cajas/{caja}/pdf | CajaController@deletePdf | auth, role:admin,deposito | cajas.deletePdf |
-| POST | /cajas/{caja}/imagen | CajaController@uploadImagen | auth, role:admin,deposito | cajas.imagen |
-| DELETE | /cajas/imagen/{imagen} | CajaController@deleteImagen | auth, role:admin,deposito | cajas.deleteImagen |
-| GET | /admin/tecnicos | AdminTecnicoController@index | auth, role:admin,deposito | admin.tecnicos |
-| POST | /admin/tecnicos | AdminTecnicoController@store | auth, role:admin,deposito | admin.tecnicos.store |
-| PUT | /admin/tecnicos/{tecnico} | AdminTecnicoController@update | auth, role:admin,deposito | admin.tecnicos.update |
-| DELETE | /admin/tecnicos/{tecnico} | AdminTecnicoController@destroy | auth, role:admin,deposito | admin.tecnicos.destroy |
-| **ADMIN CAJAS** (solo admin) | | | | |
-| GET | /admin/cajas | AdminCajaController@index | auth, role:admin | admin.cajas.index |
-| POST | /admin/cajas | AdminCajaController@store | auth, role:admin | admin.cajas.store |
-| PUT | /admin/cajas/{caja} | AdminCajaController@update | auth, role:admin | admin.cajas.update |
-| DELETE | /admin/cajas/{caja} | AdminCajaController@destroy | auth, role:admin | admin.cajas.destroy |
-| POST | /admin/cajas/{caja}/pdf | AdminCajaController@uploadPdf | auth, role:admin | admin.cajas.pdf |
-| DELETE | /admin/cajas/{caja}/pdf | AdminCajaController@deletePdf | auth, role:admin | admin.cajas.deletePdf |
-| POST | /admin/cajas/{caja}/imagen | AdminCajaController@uploadImagen | auth, role:admin | admin.cajas.imagen |
-| DELETE | /admin/cajas/imagen/{imagen} | AdminCajaController@deleteImagen | auth, role:admin | admin.cajas.deleteImagen |
-| **TÉCNICO** | | | | |
-| GET | /tecnico | TecnicoController@index | auth, role:admin,tecnico | tecnico.dashboard |
-| GET | /cx/{cirugia}/{token} | TecnicoController@viewSurgery | — (token público) | tecnico.surgery.view |
-| POST | /cx/{cirugia}/llegado | TecnicoController@llegado | — (token público) | tecnico.surgery.llegado |
-| POST | /cx/{cirugia}/finalizar | TecnicoController@finalizar | — (token público) | tecnico.surgery.finalizar |
-| **RECEPCIÓN** (admin + consumo) | | | | |
-| GET | /consumo | ConsumoController@index | auth, role:admin,consumo | consumo.dashboard |
-| POST | /consumo/{caja}/controlar | ConsumoController@controlar | auth, role:admin,consumo | consumo.controlar |
-| POST | /consumo/{caja}/finalizar | ConsumoController@finalizar | auth, role:admin,consumo | consumo.finalizar |
-| **LAVADO** (admin + acondicionador) | | | | |
-| GET | /acondicionamiento | AcondicionadorController@index | auth, role:admin,acondicionador | acondicionador.dashboard |
-| POST | /acondicionamiento/{caja}/disponibilizar | AcondicionadorController@disponibilizar | auth, role:admin,acondicionador | acondicionador.disponibilizar |
-| **PERFIL** (cualquier auth) | | | | |
-| GET | /profile | ProfileController@edit | auth | profile.edit |
-| PATCH | /profile | ProfileController@update | auth | profile.update |
-| DELETE | /profile | ProfileController@destroy | auth | profile.destroy |
+### Depósito (`admin`, `deposito`)
+| Método | URL | Acción |
+|--------|-----|--------|
+| GET | `/admin`, `/deposito` | Dashboard de inventario |
+| GET | `/cajas`, `/cajas/{caja}` | Listado y detalle (eventos, imágenes, PDF, consignaciones, grupos) |
+| POST | `/cajas/{caja}/egreso` | Asignar caja a una CX nueva |
+| POST | `/cajas/{caja}/vincular-cx` | Vincular caja CONSIGNADA a una CX existente → PENDIENTE_DESPACHO |
+| POST | `/cajas/{caja}/a-esterilizadora` | PENDIENTE_DESPACHO → EN ESTERILIZADORA |
+| POST | `/cajas/{caja}/reparacion`, `/baja`, `/disponibilizar` | Reparación, baja y vuelta a Disponible |
+| POST | `/cajas/{caja}/delegar-recepcion` | Genera link externo de recepción (24 h) |
+| POST/DELETE | `/cajas/{caja}/pdf`, `/cajas/{caja}/imagen`, `/cajas/imagen/{imagen}` | Archivos de la caja |
+| GET | `/consignaciones` | Cajas Sin Consignar / Consignadas |
+| POST | `/cajas/{caja}/consignar/extraer` | Paso 1: sube PDF y extrae instrumental |
+| POST | `/cajas/{caja}/consignar` | Paso 2: confirma y pasa a CONSIGNADA |
+| POST | `/cajas/{caja}/devolver` | CONSIGNADA → DISPONIBLE |
+| GET | `/cajas/{caja}/consignaciones` | Historial JSON de consignaciones |
+| POST | `/cirugias/{cirugia}/reasignar` | Reasignar técnico |
+| POST | `/cirugias/{cirugia}/cancelar` | Cancelar o postergar CX (devuelve cajas a DISPONIBLE) |
+| GET | `/procedimientos/buscar` | Búsqueda en API externa de procedimientos (JSON) |
+| GET/POST/PUT/DELETE | `/admin/tecnicos` | ABM de técnicos |
+| GET/POST/PUT/DELETE | `/admin/grupos` | ABM de grupos |
+| POST | `/grupos/{grupo}/egreso` | Egreso grupal a una CX |
+
+### Solo `admin`
+ABM de cajas (`/admin/cajas`), carga/borrado de PDF e imágenes (`/admin/cajas/...`).
+
+### Técnico
+| Método | URL | Acceso |
+|--------|-----|--------|
+| GET | `/tecnico` | `admin`, `tecnico` |
+| GET | `/cx/{cirugia}/{token}` | Público (valida token) |
+| POST | `/cx/{cirugia}/llegado` | Público |
+| POST | `/cx/{cirugia}/finalizar` | Público |
+
+### Recepción, Logística, Acondicionamiento
+| Método | URL | Acceso |
+|--------|-----|--------|
+| GET | `/consumo` | `admin`, `consumo` |
+| POST | `/consumo/{caja}/controlar`, `/consumo/{caja}/finalizar` | `admin`, `consumo` |
+| GET/POST | `/recepcion/{token}`, `/recepcion/{token}/confirmar` | Público (token de un solo uso, 24 h) |
+| GET | `/logistica` | `admin`, `logistica` |
+| POST | `/logistica/{caja}/retirar` | `admin`, `logistica` |
+| GET | `/acondicionamiento` | `admin`, `acondicionador` |
+| POST | `/acondicionamiento/{caja}/disponibilizar` | `admin`, `acondicionador` |
+
+### Perfil y autenticación
+`/profile` (cualquier usuario autenticado) y las rutas de Breeze (`login`, `register`, recuperar contraseña, etc.).
+
+---
+
+## API REST (Sanctum)
+
+Prefijo `/api`. Requiere header `Accept: application/json` y `Authorization: Bearer <token>`. Documentación completa en [docs/API_CONSIGNACIONES.md](docs/API_CONSIGNACIONES.md).
+
+- `POST /api/login` (público) emite un token con *abilities* según el rol del usuario; también `GET /api/me`, `POST /api/logout`, `GET/DELETE /api/tokens`.
+- **Recursos** (cada grupo exige su ability `*:read` o `*:write`): `cajas` (incluye `PATCH /cajas/{caja}/estado`), `consignaciones` (listar, stats, crear, devolver), `cirugias` (incluye `POST /cirugias/vincular-cx` y asociar/desasociar cajas), `consumos`, `grupos` (con cajas) y `eventos` (solo lectura).
+- Abilities por rol (ver `AuthController::abilitiesForRole()`):
+
+| Rol | Escritura | Solo lectura |
+|-----|-----------|--------------|
+| admin | todo (`*`) | — |
+| deposito | cajas, cirugías, grupos, consignaciones | consumos, eventos |
+| tecnico | cirugías, consumos | cajas, eventos, consignaciones |
+| consumo | consumos | cajas, cirugías, eventos, consignaciones |
+| logistica | — | cajas, cirugías, eventos, consignaciones |
+| acondicionador | cajas | cirugías, eventos |
+
+---
+
+## Integración con el módulo de Consignaciones
+
+1. **Push (API):** el módulo externo consigna cajas y crea/vincula cirugías llamando a `/api/consignaciones`, `/api/cirugias/vincular-cx`, etc.
+2. **Poll (scheduler):** `routes/console.php` ejecuta cada 2 minutos `ConsignacionesPollService::poll()`, que consulta `CONSIGNACIONES_POLL_URL` con el parámetro `desde`. Por cada nota con `NcoPlcCod`, busca la caja `CAJA-{NcoCac}` en estado `CONSIGNADA`, crea la `Cirugia` (PENDIENTE), la vincula, registra el `Consumo` con los implantes y pasa la caja a `PENDIENTE_DESPACHO`. **Está deshabilitado por defecto** (`CONSIGNACIONES_POLL_ENABLED=false`) y requiere ejecutar `php artisan schedule:work` (o un cron con `schedule:run`).
+3. **Procedimientos externos:** `ProcedureApiService` consulta `API_PROCEDURE_URL` con `API_PROCEDURE_TOKEN` (planilla de CX) para autocompletar el egreso.
+
+---
+
+## Flujo de Trabajo (Ciclo de Vida de una Caja)
+
+### 1. Alta de caja
+**admin** → `/admin/cajas`. Se crea con nombre y código interno, estado `DISPONIBLE` (mostrado como "Sin Consignar").
+
+### 2. Consignación
+**deposito/admin** → `/consignaciones`. Se indica consignatario y fecha y se adjunta el PDF del remito. `InstrumentalPdfExtractorService` lee el PDF (con `smalot/pdfparser`), detecta ítems "cantidad + descripción" agrupados por sección y muestra una grilla editable. Al confirmar, la caja pasa a `CONSIGNADA` y se guarda la consignación con sus ítems. Se puede revertir con "Devolver" (→ `DISPONIBLE`).
+
+### 3. Vinculación a una cirugía
+- **Egreso manual** (`/deposito`): se indica paciente, médico, PlcCod, técnico (usuario interno o nombre externo) y opcionalmente PDF e imágenes. La caja pasa por `PENDIENTE_DESPACHO` y luego a `EN ESTERILIZADORA`. Si el técnico es externo, se muestra un link público a la CX.
+- **Vincular a CX existente**: `CONSIGNADA` → `PENDIENTE_DESPACHO` sin avanzar.
+- **Egreso grupal**: lo mismo para todas las cajas de un grupo (las no consignadas se omiten e informan).
+- **Automático**: vía API o poll del módulo de Consignaciones.
+- La CX puede **reasignarse** a otro técnico, **cancelarse** o **postergarse** (las cajas vuelven a `DISPONIBLE`).
+
+### 4. Cirugía
+**tecnico** (`/tecnico` o link público `/cx/{id}/{token}`):
+- **Llegado:** cajas → `EN CX`; cirugía `PENDIENTE` → `EN_CURSO` (guarda `start_time`).
+- **Finalizar:** cajas → `CX FINALIZADA`; se crea un `Consumo` por caja; cirugía → `COMPLETADA` (guarda `end_time`).
+
+### 5. Retiro
+**logistica** → `/logistica`. Retira las cajas `CX FINALIZADA` del hospital/sanatorio → `EN TRANSITO VUELTA`.
+
+### 6. Recepción y auditoría
+**consumo/admin** → `/consumo` (o link externo delegado):
+- **Recibir:** `EN TRANSITO VUELTA` → `PENDIENTE`.
+- **Auditar:** OK → `ACONDICIONAMIENTO`; falla → `EN REPARACION`.
+
+### 7. Acondicionamiento
+**acondicionador/admin** → `/acondicionamiento`. "Disponibilizar" → `DISPONIBLE`.
+
+### 8. Reparación y baja
+**deposito/admin** → modales de "Enviar a Reparación" y "Dar de Baja". Desde reparación se vuelve a `DISPONIBLE` o se da de `BAJA` (terminal).
 
 ---
 
 ## Vistas (Blade)
 
-| Ruta de vista | Layout | Propósito |
-|---------------|--------|-----------|
-| `layouts/app.blade.php` | — | Layout principal: navbar (logo 200×150, dropdowns por rol), page-header, alerts, footer |
-| `layouts/guest.blade.php` | — | Layout público (login card) |
-| `auth/login.blade.php` | guest | Login con logo y gradiente |
-| `deposito/dashboard.blade.php` | app | Dashboard depósito: 8 stat cards (disponibles, en CX, etc.), tabla filtrable de cajas, modal egreso/asignar/reparar/baja |
-| `consumo/dashboard.blade.php` | app | Dashboard recepción: columna "En Tránsito" con botón Recibir, columna "Auditoría" con select ok/falla |
-| `tecnico/dashboard.blade.php` | app | Dashboard técnico: tabla de cirugías asignadas con estado y enlace |
-| `tecnico/surgery_view.blade.php` | app | Vista de cirugía en curso: detalle, boxes con PDF, imágenes con zoom modal, botón Llegado/Finalizar |
-| `acondicionador/dashboard.blade.php` | app | Dashboard lavado: lista de cajas en ACONDICIONAMIENTO con botón Disponibilizar |
-| `admin/tecnicos.blade.php` | app | CRUD técnicos: stats, lista con buscar en vivo, modales crear/editar |
-| `admin/cajas.blade.php` | app | CRUD cajas: stats, tabla con estados y PDF, modal crear |
-| `cajas/index.blade.php` | app | Listado completo de cajas con filtros |
-| `cajas/show.blade.php` | app | Detalle de caja: historial de eventos, galería de imágenes con delete, PDF upload/view/delete |
-| `profile/edit.blade.php` | app | Perfil de usuario: información, cambio contraseña, zona de peligro |
+| Vista | Propósito |
+|-------|-----------|
+| `layouts/app`, `guest`, `navigation` | Layout principal (navbar por rol), layout público de login |
+| `auth/*` | Login, registro, recuperación de contraseña (Breeze) |
+| `deposito/dashboard` | Inventario: estadísticas por estado, tabla filtrable/paginada, modales de egreso, vincular CX, grupos, reparación, baja, delegar recepción |
+| `consignaciones/index`, `confirmar` | Listado Sin Consignar/Consignadas y grilla editable del instrumental extraído del PDF |
+| `cajas/index`, `show` | Listado y detalle (eventos, imágenes, PDF, consignaciones) |
+| `admin/cajas`, `tecnicos`, `grupos` | ABM de cajas, técnicos y grupos |
+| `tecnico/dashboard`, `surgery_view` | CX asignadas y vista de CX (llegado/finalizar) |
+| `consumo/dashboard` | Recepción y auditoría |
+| `logistica/dashboard` | Retiro de cajas |
+| `acondicionador/dashboard` | Lavado y disponibilización |
+| `recepcion/token`, `hecho` | Confirmación externa por token |
+| `profile/edit` | Perfil del usuario |
 
----
-
-## Flujo de Trabajo Completo (Ciclo de Vida de una Caja)
-
-### 1. Creación de caja
-**Rol:** admin → `/admin/cajas` (AdminCajaController@store)\
-Se crea una caja con nombre y código interno. Estado inicial: `DISPONIBLE`.
-
-### 2. Asignación a cirugía (Egreso)
-**Rol:** depósito o admin → `/deposito` (modal "Asignar")\
-Se selecciona técnico, paciente, médico. Opcionalmente se adjunta PDF (nota de consignación) y una o más imágenes.\
-**Transición:** DISPONIBLE → EN ESTERILIZADORA\
-Se crea automáticamente una `Cirugia` con status `PENDIENTE` y se asocia la caja vía tabla pivote.
-
-### 3. Inicio de cirugía
-**Rol:** técnico → `/tecnico` (link a cirugía) o por token público `/cx/{id}/{token}`\
-El técnico confirma que las cajas llegaron en condiciones y marca inicio.\
-**Transición caja:** EN ESTERILIZADORA → EN CX\
-**Transición cirugía:** PENDIENTE → EN_CURSO (se registra start_time)
-
-### 4. Finalización de cirugía
-**Rol:** técnico\
-El técnico registra consumos de insumos por caja y finaliza.\
-**Transición caja:** EN CX → EN TRANSITO\
-**Transición cirugía:** EN_CURSO → COMPLETADA (se registra end_time)\
-Se guarda registro en tabla `consumos` con items (JSON) y observaciones.
-
-### 5. Recepción y control (Consumo / Auditoría)
-**Rol:** consumo o admin → `/consumo`
-- **Paso 5a (Recibir):** La caja llega al área de consumo. Botón "Recibir" → caja pasa a `PENDIENTE`.
-- **Paso 5b (Auditar):** Se evalúa la caja:
-  - **OK:** Caja íntegra → `ACONDICIONAMIENTO` (pasa a lavado)
-  - **FALLA:** Se detectan problemas → `EN REPARACION`
-
-### 6. Lavado y acondicionamiento
-**Rol:** acondicionador o admin → `/acondicionamiento`\
-Se limpia, desinfecta y seca el instrumental.\
-Botón "Disponibilizar" → caja vuelve a `DISPONIBLE`, lista para nuevo ciclo.
-
-### 7. Reparación
-**Rol:** depósito o admin → `/deposito` (modal "Enviar a Reparación")\
-Si una caja falla en cualquier etapa, se envía a `EN REPARACION`.\
-Desde reparación puede volver a `DISPONIBLE` o darse de `BAJA`.
-
-### 8. Baja
-**Rol:** depósito o admin → `/deposito` (modal "Dar de Baja")\
-Estado terminal. La caja ya no puede reingresar al ciclo.
+El estilo propio (navbar `.navbar-bio`, `.stat-card`, `.card-elegante`, `.btn-bio`, `.badge-estado`, `.table-bio`) está en `resources/css/app.css`.
 
 ---
 
 ## Gestión de Archivos
 
-**Almacenamiento:** Disco `public` de Laravel (`storage/app/public/cajas/`)
+Disco `public` (`storage/app/public/cajas/`). Requiere `php artisan storage:link`.
 
-| Tipo | Ruta | Validación | Tamaño máx |
-|------|------|-----------|------------|
-| PDF (Nota de Consignación) | `cajas/pdfs/` | mimes:pdf | 10 MB |
-| Imágenes | `cajas/imagenes/` | jpg, jpeg, png, webp | 5 MB c/u |
+| Tipo | Ruta | Validación |
+|------|------|-----------|
+| PDF (remito / nota de consignación) | `cajas/pdfs/` | `mimes:pdf`, 10 MB |
+| Imágenes | `cajas/imagenes/` | jpg, jpeg, png, webp, 5 MB c/u |
 
-**Acceso en vistas:** `asset('storage/' . $imagen->ruta)` (no `Storage::url()` para evitar importar facade en Blade).
-
-**Vinculación:** Debe existir link simbólico: `php artisan storage:link`
-
-**Eliminación:** Al borrar imagen/PDF, se elimina el archivo físico con `Storage::disk('public')->delete()`.
-
----
-
-## Vistas — Estructura y Estilo
-
-### Layouts
-- **`app.blade.php`**: NavBar con logo a la izquierda (200×150px), dropdowns por rol, menú usuario (avatar con inicial, dropdown perfil/cerrar sesión). Footer con logo gris y copyright.
-- **`guest.blade.php`**: Fondo gradiente navy con glow decorativo, card login centrada.
-
-### Componentes de diseño (CSS personalizado en `resources/css/app.css`)
-- **`.navbar-bio`**: Fondo gradiente navy (#1e3a5f → #0f172a), altura 70px, nav-links con hover semitransparente, dropdowns con sombra.
-- **`.stat-card`**: Tarjeta con padding 2rem, sombra, hover lift (translateY -5px), icono colorido arriba, número grande (2.5rem) + label uppercase.
-- **`.card-elegante`**: Card con backdrop-filter blur, header gradiente gris claro, border-bottom.
-- **`.btn-bio`**: Botón con border-radius 12px, hover lift + sombra, variantes sm/lg.
-- **`.badge-estado`**: Badge redondeado (50rem), texto uppercase pequeño.
-- **`.form-control-bio`**: Input con border 2px, focus ring primary.
-- **`.table-bio`**: Tabla con headers uppercase small, filas hover.
-
-### Paleta de colores
-- Navy: `#0f172a` / `#1e3a5f`
-- Primary: `#3b82f6` → `#2563eb`
-- Success: `#10b981` → `#059669`
-- Danger: `#ef4444` → `#dc2626`
-- Warning: `#f59e0b`
-- Info: `#06b6d4`
-
-**Responsive deshabilitado:** Las columnas Bootstrap se comportan como desktop siempre (media query que fuerza `min-width: 100%` en mobile).
+En vistas se usa `asset('storage/' . $ruta)`. Al borrar una imagen o PDF se elimina también el archivo físico.
 
 ---
 
 ## Instalación y Configuración
 
 ```bash
-# Requisitos: PHP 8.4+, MySQL 8+, Composer, Node 20+
+# Requisitos: PHP 8.2+ (8.4 recomendado), MySQL 8+, Composer, Node 20+
 git clone <repo>
 cd Sistema-Cajas-2026
 
-# Backend
 composer install
-cp .env.example .env   # Configurar DB_CONNECTION=mysql, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+cp .env.example .env     # Configurar DB_CONNECTION=mysql y credenciales
 php artisan key:generate
 php artisan migrate
 
-# Frontend
 npm install
 npm run build
 
-# Storage link
 php artisan storage:link
-
-# Iniciar servidor
-php artisan serve
-# Visitar http://localhost:8000
+php artisan serve        # http://localhost:8000
 ```
 
-### Seeders recomendados (crear primer admin)
+`composer run dev` levanta servidor, cola, logs y Vite a la vez.
+
+### Variables de entorno relevantes
+| Variable | Uso |
+|----------|-----|
+| `DB_*` | Conexión MySQL (el `.env.example` trae SQLite por defecto) |
+| `API_PROCEDURE_URL`, `API_PROCEDURE_TOKEN` | API externa de procedimientos |
+| `CONSIGNACIONES_POLL_ENABLED`, `CONSIGNACIONES_POLL_URL` | Poll del módulo de Consignaciones |
+| `QUEUE_CONNECTION`, `SESSION_DRIVER`, `CACHE_STORE` | `database` por defecto |
+
+### Primer usuario administrador
 ```php
 php artisan tinker
->>> \App\Models\User::create(['name'=>'Admin','email'=>'admin@bioimplant.com','password'=>bcrypt('admin123'),'role'=>'admin']);
+>>> \App\Models\User::create(['name'=>'Admin','email'=>'admin@ejemplo.com','password'=>'cambiar-esta-clave','role'=>'admin']);
 ```
+(El modelo castea `password` a `hashed`, no hace falta `bcrypt()`.)
+
+### Poll de consignaciones (opcional)
+Poner `CONSIGNACIONES_POLL_ENABLED=true` y mantener corriendo `php artisan schedule:work` (o un cron `* * * * * php artisan schedule:run`).
+
+---
+
+## Despliegue
+
+- `.github/workflows/laravel.yml` — al hacer push a `master`, entra por SSH al servidor Ubuntu, hace `git pull`, instala dependencias, compila assets, migra, cachea config/rutas/vistas, configura Apache y reinicia `php artisan serve` en una sesión `tmux`.
+- `.github/workflows/deploy.yml` — pipeline CI/CD alternativo que se dispara con push a `main`.
+- **Apache** (`docs/apache/`) termina HTTPS en 443 y hace reverse proxy a `artisan serve` en el puerto 8000. Hay una alternativa en `docs/nginx/`.
+- `bootstrap/app.php` confía en todos los proxies (`trustProxies(at: '*')`).
+
+> ⚠️ Los secretos (contraseña de base de datos, token de la API de procedimientos) **no deben estar escritos en los workflows**. Usar GitHub Secrets / `.env` del servidor.
 
 ---
 
 ## Convenciones de Código
 
-- **Sin comentarios** en código fuente (excepto migraciones).
-- **Blade:** Variables con `$camelCase`, helpers como `asset()`.
-- **Rutas:** Nombres con `recurso.accion` (ej: `cajas.egreso`, `consumo.controlar`).
-- **Tablas:** Nombres en español, plural (`caja_imagenes`, `evento_cajas`). Modelo `CajaImagen` requiere `protected $table = 'caja_imagenes'` explícito.
-- **Controladores:** Un controller por área funcional. Métodos retornan `back()` con mensaje `success`/`error`/`warning`.
-- **Estado de cajas:** Constantes en español mayúsculas (ej: `'DISPONIBLE'`, `'EN ESTERILIZADORA'`).
-- **Vite:** CSS y JS compilados con Vite, referenciados con `@vite()`.
+- Tablas en español y plural (`caja_imagenes`, `evento_cajas`, `caja_consignaciones`); los modelos con plural irregular definen `$table` explícito.
+- Rutas con nombre `recurso.accion` (`cajas.egreso`, `consumo.controlar`).
+- Controladores por área funcional; devuelven `back()` con mensaje `success` / `error` / `warning`.
+- Estados de cajas en mayúsculas, con constantes de texto (`'DISPONIBLE'`, `'EN ESTERILIZADORA'`, etc.). Todo cambio de estado debe pasar por `BoxStateService::transition()` para quedar en el historial.
+- Assets con Vite (`@vite()`); CSS y JS en `resources/`.
+
+---
+
+## Puntos pendientes / a tener en cuenta
+
+- Las rutas públicas `/cx/{cirugia}/llegado` y `/finalizar` no validan el token de acceso (solo `viewSurgery` lo hace).
+- Varios controladores (`Acondicionador`, `Consumo`, `Tecnico`) no comprueban `canTransition()` antes de transicionar (`Tecnico` solo registra un warning).
+- Las rutas de registro de Breeze están habilitadas para invitados.
+- La cobertura de tests es mínima (solo pruebas de Breeze y de ejemplo).
+- Los workflows `laravel.yml` (`master`) y `deploy.yml` (`main`) son redundantes.
